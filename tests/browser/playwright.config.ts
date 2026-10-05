@@ -19,12 +19,13 @@ export default defineConfig({
   retries: 0,
   timeout: 60_000,
   expect: { timeout: 15_000 },
-  reporter: [["list"]],
+  // W6: the JUnit report is what the evidence register reads (scenario id at the start of each title).
+  reporter: [["list"], ["junit", { outputFile: "../../test-results/browser/junit.xml" }]],
   use: { baseURL: process.env.BASE_URL, screenshot: "only-on-failure", trace: "off" },
   projects: [
     { name: "inloggen", testMatch: /inloggen\.setup\.ts$/, use: telefoon },
-    { name: "telefoon", testMatch: /\.pw\.ts$/, testIgnore: /afmelden\.pw\.ts$/, dependencies: ["inloggen"], use: { ...telefoon, storageState: STATE } },
-    { name: "computer", testMatch: /\.pw\.ts$/, testIgnore: /afmelden\.pw\.ts$/, dependencies: ["inloggen"], use: { ...computer, storageState: STATE } },
+    { name: "telefoon", testMatch: /\.pw\.ts$/, testIgnore: /(afmelden|spaak-personeel|spaak-breedtes)\.pw\.ts$/, dependencies: ["inloggen"], use: { ...telefoon, storageState: STATE } },
+    { name: "computer", testMatch: /\.pw\.ts$/, testIgnore: /(afmelden|spaak-klant)\.pw\.ts$/, dependencies: ["inloggen"], use: { ...computer, storageState: STATE } },
     { name: "afmelden", testMatch: /afmelden\.pw\.ts$/, dependencies: ["telefoon", "computer"], use: computer },
   ],
 });
