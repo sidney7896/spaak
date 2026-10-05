@@ -88,7 +88,7 @@ describe("the rendered migration gates rows by membership (fixture database)", (
       // The runner points at the DEVELOPMENT schema; the production rendering must pin itself.
       await db.exec(`set search_path to app_alpha_app_dev, public;\n${production}`);
       expect(await tableCount(db, "app_alpha_app_dev")).toBe("0");
-      expect(await tableCount(db, "app_alpha_app_prod")).toBe("1");
+      expect(await tableCount(db, "app_alpha_app_prod")).toBe("5"); // notes plus the four Spaak tables (W1b)
 
       // And with the search_path pin stripped out - a runner that executes statement by statement,
       // so SET LOCAL never survives - the schema qualification still keeps every object in place.
@@ -101,7 +101,7 @@ describe("the rendered migration gates rows by membership (fixture database)", (
         await second.exec("create schema app_alpha_app_dev; create schema app_alpha_app_prod;");
         await second.exec(`set search_path to app_alpha_app_dev, public;\n${unpinned}`);
         expect(await tableCount(second, "app_alpha_app_dev")).toBe("0");
-        expect(await tableCount(second, "app_alpha_app_prod")).toBe("1");
+        expect(await tableCount(second, "app_alpha_app_prod")).toBe("5");
       } finally {
         await second.close();
       }
