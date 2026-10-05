@@ -153,3 +153,33 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 .spaak-confirmation { border-color: var(--spaak-ok); background: var(--spaak-ok-soft); }
 .spaak-footer { margin: 12px 16px 0; padding: 18px 0 24px; border-top: 3px dotted var(--spaak-line); font-size: 16px; color: var(--spaak-muted); }
 .spaak-footer p { margin: 0 0 6px; }
+
+/* Workshop tablet: the customer's D1 choice, four large controls in two rows. */
+.spaak-workshop { max-width: 960px; }
+.spaak-workshop .spaak-shop-header { padding: 20px 24px; background: var(--spaak-ink); color: var(--spaak-bg); border-radius: 18px; }
+.spaak-workshop .spaak-shop-subtitle { color: var(--spaak-line); }
+.spaak-workshop .spaak-wheel { color: var(--spaak-honey); }
+.spaak-day-board h1 { font-size: clamp(28px, 4vw, 38px); }
+.spaak-day-board .spaak-day-nav { margin: 20px 0 24px; }
+.spaak-workshop-slot { margin-bottom: 28px; }
+.spaak-workshop-slot h2 { font: 700 26px/1.2 var(--spaak-serif); margin: 0 0 14px; }
+.spaak-workshop-booking { border-width: 2px; padding: 20px; }
+.spaak-booking-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+.spaak-booking-heading h3 { margin: 0; font: 700 24px/1.2 var(--spaak-serif); }
+.spaak-workshop-status { display: inline-flex; border: 2px solid var(--spaak-edge); border-radius: 999px; padding: 6px 14px; font-weight: 700; background: var(--spaak-honey-soft); }
+.spaak-workshop-status[data-status="bezig"] { border-color: var(--spaak-brand); background: var(--spaak-bad-soft); }
+.spaak-workshop-status:is([data-status="klaar"], [data-status="opgehaald"]) { border-color: var(--spaak-ok); background: var(--spaak-ok-soft); }
+.spaak-status-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.spaak-day-board .spaak-status-buttons .spaak-button { min-height: 72px; padding: 14px 8px; border-radius: 14px; }
+.spaak-day-board .spaak-status-buttons .spaak-button:not(:disabled) { background: var(--spaak-brand); color: #fff; }
+.spaak-day-board .spaak-status-buttons .spaak-button:not(:disabled):hover { background: var(--spaak-brand-dark); }
+.spaak-day-board .spaak-status-buttons .spaak-button:disabled { opacity: 1; background: var(--spaak-bg); border-color: var(--spaak-line); color: var(--spaak-muted); cursor: not-allowed; }
+.spaak-day-board .spaak-status-buttons .spaak-button[aria-pressed="true"] { border-color: var(--spaak-ok); background: var(--spaak-ok-soft); color: var(--spaak-ok); }
+.spaak-day-board a.spaak-button { text-decoration: none; }
+body:has(.spaak-workshop) :is(a, button) { min-height: 56px; min-width: 56px; }
+body:has(.spaak-workshop) .nav :is(a, button) { min-height: 56px; min-width: 56px; }
+@media (min-width: 720px) {
+  .spaak-workshop-slot { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 0 20px; border-top: 3px solid var(--spaak-line); padding-top: 20px; }
+  .spaak-workshop-slot h2 { grid-column: 1; grid-row: 1; align-self: start; position: sticky; top: 16px; }
+  .spaak-workshop-slot article { grid-column: 2; }
+}
