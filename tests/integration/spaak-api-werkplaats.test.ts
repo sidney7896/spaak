@@ -81,7 +81,10 @@ describe("staff only", () => {
   it("refuses a tampered test cookie", async () => {
     const cookie = await loginCookie();
     const [name, value] = cookie.split("=");
-    const tampered = name + "=" + value.slice(0, -2) + (value.endsWith("A") ? "B" : "A") + value.slice(-1);
+    // Change the second-to-last character of the signature into a different one (the earlier version compared the
+    // last character, so about 1 run in 64 left the cookie unchanged).
+    const tampered = name + "=" + value.slice(0, -2) + (value.at(-2) === "A" ? "B" : "A") + value.slice(-1);
+    expect(tampered).not.toBe(cookie);
     expect((await dayRoute(req("/api/spaak/werkplaats/dag?datum=2026-10-08", { cookie: tampered }))).status).toBe(401);
   });
 });
