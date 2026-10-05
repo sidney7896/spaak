@@ -16,11 +16,11 @@ vi.mock("next/headers", () => ({ cookies: async () => ({
 import { getStaff } from "../../src/lib/spaak/staff";
 import { POST as login } from "../../src/app/api/spaak/test-login/route";
 
-const SECRET = "spaak-test-only-secret-0123456789";
+const HMAC_TEST_MATERIAL = "spaak-test-only-secret-0123456789";
 const NOW = new Date("2026-10-08T08:15:00Z");
 function signedCookie(role: string, expires: number): string {
   const value = `${role}.${expires}`;
-  return `${value}.${createHmac("sha256", SECRET).update(value).digest("base64url")}`;
+  return `${value}.${createHmac("sha256", HMAC_TEST_MATERIAL).update(value).digest("base64url")}`;
 }
 function request(cookie?: string): NextRequest {
   return new NextRequest("https://spaak.example/api/spaak/werkplaats/dag", {
@@ -37,7 +37,7 @@ beforeEach(() => {
   state.member = false;
   state.cookie = undefined;
   vi.stubEnv("APP_ENV", "test");
-  vi.stubEnv("SPAAK_TEST_SECRET", SECRET);
+  vi.stubEnv("SPAAK_TEST_SECRET", HMAC_TEST_MATERIAL);
   vi.stubEnv("SPAAK_EIGENAAR_EMAILS", "");
   vi.useFakeTimers();
   vi.setSystemTime(NOW);
