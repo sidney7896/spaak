@@ -19,6 +19,7 @@ type Submission = Extract<ApiRequest, { kind: "booking" }>;
 type Notice = { message: string; retry?: ApiRequest };
 
 const HEADINGS = ["Wat moet er aan je fiets gebeuren?", "Wanneer kom je?", "Wie ben je?", "Je afspraak staat"];
+const UNANSWERED_MESSAGE = "We weten nog niet of je afspraak is gelukt. Probeer het opnieuw; je krijgt geen dubbele afspraak.";
 const LABELS: Record<keyof Contact, string> = {
   naam: "Naam", telefoon: "Telefoon", email: "E-mail", fiets: "Wat is er met je fiets?",
 };
@@ -112,6 +113,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
   const active = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const [submission, setSubmission] = useState<Submission | null>(null);
+  const formLocked = busy || submission !== null;
   const heading = useRef<HTMLHeadingElement>(null);
   const fieldPrefix = useId();
 
@@ -121,7 +123,8 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
     active.current = controller;
     const requestGeneration = ++generation.current;
     setBusy(true);
-    setNotice(null);
+    // Keep the unanswered alert visible while its stored request is being retried.
+    setNotice((current) => task.kind === "booking" && current?.retry === task ? current : null);
     try {
       const { status, body } = await fetchReply(task, controller);
       if (generation.current !== requestGeneration) return;
@@ -156,12 +159,14 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
         if (status !== 200 && status !== 201) throw new Error("Je afspraak is nog niet bevestigd. Probeer het opnieuw.");
         if (typeof body.code !== "string" || !record(body.afspraak)) throw new Error("De bevestiging kon niet worden gelezen.");
         setSubmission(null);
+        setNotice(null);
         setConfirmation(body as Confirmation);
         setStep(4);
       }
     } catch (error) {
       if (generation.current === requestGeneration) {
-        setNotice({ message: error instanceof TypeError ? "Er is geen verbinding. Probeer het opnieuw."
+        setNotice({ message: task.kind === "booking" ? UNANSWERED_MESSAGE
+          : error instanceof TypeError ? "Er is geen verbinding. Probeer het opnieuw."
           : error instanceof Error ? error.message : "Er ging iets mis. Probeer het opnieuw.", retry: task });
       }
     } finally {
@@ -184,12 +189,11 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
   useEffect(() => { heading.current?.focus(); }, [step]);
 
   function openDay(nextDate: string): void {
-    if (active.current) return;
+    if (active.current || submission) return;
     setDate(nextDate);
     setDay(null);
     setSlot(null);
     setStep(2);
-    // Navigation does not resolve a submission whose response may have been lost.
     void execute({ kind: "day", date: nextDate });
   }
 
@@ -199,7 +203,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
   }
 
   function submitBooking(): void {
-    if (active.current || !repair || !slot) return;
+    if (active.current || submission || !repair || !slot) return;
     const fieldErrors = validateContact(contact);
     setErrors(fieldErrors);
     if (Object.keys(fieldErrors).length > 0) {
@@ -210,8 +214,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       naam: contact.naam.trim(), telefoon: contact.telefoon.trim(), email: contact.email.trim(), fiets: contact.fiets.trim(),
       repairTypeId: repair.id, date, start: slot.start,
     };
-    // Resolve the previous request before creating another booking identity.
-    const task: Submission = submission ?? { kind: "booking", input, key: crypto.randomUUID() };
+    const task: Submission = { kind: "booking", input, key: crypto.randomUUID() };
     setSubmission(task);
     void execute(task);
   }
@@ -230,17 +233,11 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       <p className="spaak-step-label">{["Reparatie", "Dag en tijd", "Je gegevens", "Klaar"][step - 1]}</p>
     </div></div>
     <h1 id={`${fieldPrefix}-heading`} ref={heading} tabIndex={-1}>{HEADINGS[step - 1]}</h1>
-    {submission && <div className="spaak-pending">
-      <p>Je vorige aanvraag is nog niet bevestigd.</p>
-      <button className="spaak-button spaak-secondary" type="button" disabled={busy}
-        onClick={() => { void execute(submission); }}>Vorige aanvraag opnieuw versturen</button>
-    </div>}
     {notice && <div className="spaak-alert" role="alert">
       <p>{notice.message}</p>
       {notice.retry && <button className="spaak-button spaak-secondary" type="button" disabled={busy}
         onClick={() => {
-          if (notice.retry?.kind === "booking") submitBooking();
-          else if (notice.retry) void execute(notice.retry);
+          if (notice.retry) void execute(notice.retry);
         }}>Opnieuw proberen</button>}
     </div>}
     {busy && <p className="spaak-loading" role="status">{step === 3 ? "Je afspraak wordt verwerkt…" : "Even ophalen…"}</p>}
@@ -284,9 +281,10 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
         {CONTACT_FIELDS.map((field) => {
           const id = `${fieldPrefix}-${field}`;
           const common = {
-            id, name: field, value: contact[field], "aria-invalid": errors[field] ? true : undefined,
+            id, name: field, value: contact[field], disabled: formLocked, "aria-invalid": errors[field] ? true : undefined,
             "aria-describedby": errors[field] ? `${id}-error` : undefined,
             onChange: (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+              if (active.current || submission) return;
               const value = event.target.value;
               setContact((current) => ({ ...current, [field]: value }));
               setErrors((current) => ({ ...current, [field]: undefined }));
@@ -302,9 +300,9 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
         })}
         {(["date", "start", "repairTypeId"] as const).map((field) => errors[field]
           ? <p className="spaak-field-error" key={field}>{errors[field]}</p> : null)}
-        <button className="spaak-button" type="submit" disabled={busy}>Bevestigen</button>
+        <button className="spaak-button" type="submit" disabled={formLocked}>Bevestigen</button>
       </form>
-      <button className="spaak-back" type="button" disabled={busy} onClick={() => openDay(date)}>Ander tijdvak kiezen</button>
+      <button className="spaak-back" type="button" disabled={formLocked} onClick={() => openDay(date)}>Ander tijdvak kiezen</button>
     </>}
     {step === 4 && confirmation && <>
       <p className="spaak-lead">Bewaar je afspraakcode. We zien je graag in de werkplaats.</p>

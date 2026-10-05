@@ -132,8 +132,6 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 .spaak-panel .spaak-button, .spaak-alert .spaak-button { margin-top: 12px; }
 .spaak-alert { border: 3px solid var(--spaak-bad); border-radius: 18px; background: var(--spaak-bad-soft); padding: 16px 18px; margin: 16px 0; }
 .spaak-alert p:last-child { margin-bottom: 0; }
-.spaak-pending { border: 3px solid var(--spaak-honey); border-radius: 18px; background: var(--spaak-honey-soft); padding: 16px 18px; margin: 16px 0; }
-.spaak-pending .spaak-button { margin-top: 12px; }
 .spaak-loading { color: var(--spaak-muted); }
 .spaak-recap { background: var(--spaak-honey-soft); border: 3px solid var(--spaak-honey); border-radius: 18px; padding: 6px 16px; margin-bottom: 20px; }
 .spaak-summary { margin: 0; padding: 0; }
@@ -145,6 +143,7 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 .spaak-field label { display: block; font: 700 19px/1.3 var(--spaak-sans); margin-bottom: 8px; }
 .spaak-field :is(input, textarea) { display: block; width: 100%; min-height: 58px; padding: 12px 14px; border: 3px solid var(--spaak-edge); border-radius: 14px; background: #fff; color: var(--spaak-ink); font: 400 20px/1.3 var(--spaak-sans); }
 .spaak-field textarea { min-height: 150px; resize: vertical; }
+.spaak-field :is(input, textarea):disabled { background: var(--spaak-honey-soft); color: var(--spaak-muted); cursor: not-allowed; }
 .spaak-field [aria-invalid="true"] { border-color: var(--spaak-bad); background: var(--spaak-bad-soft); }
 .spaak-flow .spaak-field-error { margin: 8px 0 0; color: var(--spaak-bad); font: 700 17px/1.4 var(--spaak-sans); }
 .spaak-flow .spaak-back { display: inline-flex; min-height: 48px; padding: 10px 0; margin-top: 12px; border: 0; background: transparent; color: var(--spaak-brand-dark); font: 700 18px/1.3 var(--spaak-sans); text-decoration: underline; text-underline-offset: 4px; white-space: normal; text-align: left; }
