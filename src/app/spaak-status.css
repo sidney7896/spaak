@@ -1,0 +1,11 @@
+.spaak-status-lookup h2 { font: 700 22px/1.2 var(--spaak-serif); margin: 0 0 12px; }
+.spaak-status-lookup .spaak-status-hint { display: block; color: var(--spaak-muted); font-size: 16px; margin-bottom: 8px; }
+.spaak-status-lookup .spaak-status-code { text-transform: uppercase; letter-spacing: .12em; }
+.spaak-status-lookup .spaak-status-result { margin-top: 24px; }
+.spaak-status-lookup .spaak-status-label { font: 700 26px/1.3 var(--spaak-serif); }
+.spaak-status-lookup .spaak-status-actions { display: grid; gap: 12px; margin-top: 18px; }
+.spaak-status-lookup .spaak-status-confirm { background: var(--spaak-honey-soft); border-color: var(--spaak-edge); margin-top: 18px; }
+.spaak-status-lookup .spaak-status-danger { background: var(--spaak-bad); border-color: var(--spaak-bad); }
+.spaak-status-lookup .spaak-status-danger:hover { background: #7E1713; border-color: #7E1713; }
+.spaak-status-lookup .spaak-status-success { color: var(--spaak-ok); font-weight: 700; }
+.spaak-status-lookup :is(h2, [role="alertdialog"]):focus-visible { outline: 4px solid var(--spaak-focus); outline-offset: 3px; }
