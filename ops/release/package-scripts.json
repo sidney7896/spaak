@@ -1,0 +1,93 @@
+{
+  "comment": [
+    "The package scripts and test directories a managed project MUST provide because the canonical",
+    "workflows in starter/ci/workflows/ run them (R3-05). This file is delivered to a generated",
+    "project as ops/release/package-scripts.json and is checked by ops/release/check-project-scripts.mjs",
+    "in the workflow-validation gate, so a project that is missing any of them fails its own CI with",
+    "the exact list instead of failing eight gates with confusing resolution errors.",
+    "",
+    "R8REL-02: \"command\" is the PINNED BODY of the script, not a suggestion. The canonical workflows",
+    "run `pnpm run <name>`, and what that name RUNS lives in package.json - a file no control pinned,",
+    "tested or reviewed. One word (\"smoke:production\": \"true\") therefore made the pre-promotion smoke",
+    "gate vacuous while all three delivered controls stayed green, and the same edit silenced five of",
+    "the thirteen required gates (lint, typecheck, build, migrations, operational_readiness), which",
+    "are defined ENTIRELY in package.json. check-project-scripts.mjs now compares each required",
+    "script's body against \"command\" and refuses a divergence, and both branch-protection plans put",
+    "package.json under code-owner review. A project that must implement a gate differently changes",
+    "this declaration in the standard, which is a reviewed diff in a covered path - not a word in its",
+    "own package.json.",
+    "\"suggested\" stays the string starter/create-project.mjs writes when a script is absent, and",
+    "ops/release/release.test.mjs asserts it is IDENTICAL to \"command\" for every entry, so the",
+    "generator can never produce a project that fails its own pin.",
+    "CLOSED (W03f): starter/template/package.json declares every script, starter/template/ops/ holds",
+    "the files they run and starter/template/tests/ holds the six directories, and",
+    "starter/create-project.mjs merges this declaration into the generated package.json. The starter",
+    "lane guards it with starter/tests/workflow-contract.test.mjs (parses the canonical workflows)",
+    "and starter/tests/ops-scripts.test.mjs (runs every script)."
+  ],
+  "scripts": {
+    "lint": {
+      "purpose": "static lint of the whole project; the lint gate",
+      "command": "eslint .",
+      "suggested": "eslint ."
+    },
+    "typecheck": {
+      "purpose": "TypeScript project check without emit; the typecheck gate",
+      "command": "tsc --noEmit",
+      "suggested": "tsc --noEmit"
+    },
+    "build": {
+      "purpose": "ordinary application build; the build gate",
+      "command": "next build",
+      "suggested": "next build"
+    },
+    "check:standard": {
+      "purpose": "operational readiness check against the launch standard; the operational_readiness gate",
+      "command": "node ops/check-standard.mjs",
+      "suggested": "node ops/check-standard.mjs"
+    },
+    "migration:check": {
+      "purpose": "verify the migration set against the target schema without applying it; the migrations gate",
+      "command": "node ops/render-migration.mjs --check",
+      "suggested": "node ops/render-migration.mjs --check"
+    },
+    "migration:apply": {
+      "purpose": "apply migrations to one environment schema; runs only in the production environment job",
+      "command": "node ops/render-migration.mjs --apply",
+      "suggested": "node ops/render-migration.mjs --apply"
+    },
+    "build:production": {
+      "purpose": "production-configured build without domain assignment; also creates the candidate deployment",
+      "command": "node ops/build-production.mjs",
+      "suggested": "node ops/build-production.mjs"
+    },
+    "smoke:production": {
+      "purpose": "bounded read-only smoke check against the production deployment before promotion",
+      "command": "node ops/smoke.mjs",
+      "suggested": "node ops/smoke.mjs"
+    },
+    "promote:production": {
+      "purpose": "promote the verified build to production; the single production promotion owner",
+      "command": "node ops/promote.mjs",
+      "suggested": "node ops/promote.mjs"
+    },
+    "health:production": {
+      "purpose": "bounded post-promotion health check writing health.json",
+      "command": "node ops/health.mjs",
+      "suggested": "node ops/health.mjs"
+    },
+    "rollback:app": {
+      "purpose": "application-only rollback to a known good deployment; never restores a database",
+      "command": "node ops/rollback.mjs",
+      "suggested": "node ops/rollback.mjs"
+    }
+  },
+  "testDirectories": [
+    "tests/config",
+    "tests/e2e",
+    "tests/integration",
+    "tests/rls",
+    "tests/security",
+    "tests/unit"
+  ]
+}

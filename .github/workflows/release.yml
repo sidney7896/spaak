@@ -1,0 +1,512 @@
+name: Release
+
+on:
+  push:
+    branches: [feature/**, dev, staging, main]
+
+# Vercel auto-deploy-to-production is disabled; this is the single production promotion owner.
+# Deployment secrets are environment-scoped and are never available to pull_request jobs.
+# This file is canonical: ops/release/validate-workflows.mjs requires every file under
+# .github/workflows/ to be byte-identical to its rendering of ops/release/workflow-templates/,
+# so a workflow that is not this one cannot exist in a managed repository (D-014).
+#
+# D-025 (R9REL-01/02/03/05): every gate step and every ops step below is
+# `node ops/release/run-gate.mjs <gate>` and nothing else. The arguments each gate passes live in
+# ops/release/gates.json as an argv ARRAY, so nothing is handed to a shell and no `--` separator is
+# forwarded: the ninth review measured that pnpm 11.9.0 passes that separator through, which made
+# the required `migrations` gate exit 1 with `Invalid argument --` on every run and every production
+# job fail on its first argument. ops/release/check-project-scripts.mjs refuses the old spellings.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  record-candidate:
+    runs-on: ubuntu-latest
+    outputs:
+      tree_hash: ${{ steps.identity.outputs.tree_hash }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: identity
+        run: node ops/release/record-candidate.mjs --policy-revision "$POLICY_REVISION" --out candidate.json --github-output "$GITHUB_OUTPUT"
+        env:
+          POLICY_REVISION: ${{ vars.POLICY_REVISION }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-candidate-${{ github.sha }}
+          path: candidate.json
+
+  lint:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs lint
+
+  typecheck:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs typecheck
+
+  build:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs build
+
+  unit_tests:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs unit_tests
+
+  integration_tests:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs integration_tests
+
+  e2e_tests:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs e2e_tests
+
+  security_scan:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs security_scan
+
+  dependency_scan:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs dependency_scan
+
+  # The release helpers import node: builtins only (R3-04), so a bare checkout is enough for every
+  # job below that runs one. Nothing here silently depends on `pnpm install` having happened.
+  secret_scan:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node ops/release/run-gate.mjs secret_scan
+
+  access_isolation:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs access_isolation
+
+  migrations:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs migrations
+        env:
+          PRODUCTION_SCHEMA: ${{ vars.PRODUCTION_SCHEMA }}
+
+  environment_isolation:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs environment_isolation
+
+  operational_readiness:
+    needs: [workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs operational_readiness
+
+  # The allowlist gate: this repository may contain only the canonical workflows, and it must be
+  # able to run every script and test directory they call (R3-05).
+  #
+  # R5-03: every required status check of this workflow needs this job, so a change that breaks
+  # workflow validation cannot leave a single required check green. The branch-protection plan
+  # requires it by name as well (`workflow-validation`, unambiguous since ci.yml's jobs took the
+  # `ci-` prefix in R4-08).
+  #
+  # D-025: the controls gate runs first, on a bare checkout, so an undeclared package-manager
+  # configuration is refused before any job has run `pnpm install --frozen-lockfile`.
+  workflow-validation:
+    needs: [record-candidate]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node ops/release/run-gate.mjs controls
+      - run: node ops/release/validate-workflows.mjs .
+      - run: node ops/release/check-project-scripts.mjs .
+
+  gates:
+    needs: [record-candidate, lint, typecheck, build, unit_tests, integration_tests, e2e_tests, security_scan, dependency_scan, secret_scan, access_isolation, migrations, environment_isolation, operational_readiness, workflow-validation]
+    runs-on: ubuntu-latest
+    env:
+      LINT_STATUS: ${{ needs.lint.result }}
+      TYPECHECK_STATUS: ${{ needs.typecheck.result }}
+      BUILD_STATUS: ${{ needs.build.result }}
+      UNIT_TESTS_STATUS: ${{ needs.unit_tests.result }}
+      INTEGRATION_TESTS_STATUS: ${{ needs.integration_tests.result }}
+      E2E_TESTS_STATUS: ${{ needs.e2e_tests.result }}
+      SECURITY_SCAN_STATUS: ${{ needs.security_scan.result }}
+      DEPENDENCY_SCAN_STATUS: ${{ needs.dependency_scan.result }}
+      SECRET_SCAN_STATUS: ${{ needs.secret_scan.result }}
+      ACCESS_ISOLATION_STATUS: ${{ needs.access_isolation.result }}
+      MIGRATIONS_STATUS: ${{ needs.migrations.result }}
+      ENVIRONMENT_ISOLATION_STATUS: ${{ needs.environment_isolation.result }}
+      OPERATIONAL_READINESS_STATUS: ${{ needs.operational_readiness.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Evaluate the standard's required gates with evidence references
+        run: |
+          REQUIRED="$(node ops/release/required-gates.mjs)"
+          RESULTS="$(node ops/release/gate-results.mjs)"
+          node ops/release/evaluate-gates.mjs --required "$REQUIRED" --results "$RESULTS"
+
+  # Staging records ONE promotion candidate: the identity of the staged tree plus the per-gate
+  # evidence of this run. The artifact name carries the tree hash, so the production run can only
+  # find a record for a tree that staging actually recorded. The required-gate list is the
+  # standard's (ops/release/required-gates.mjs), never the workflow's own opinion (R3-06).
+  staging-evidence:
+    if: github.ref == 'refs/heads/staging'
+    needs: [record-candidate, gates, lint, typecheck, build, unit_tests, integration_tests, e2e_tests, security_scan, dependency_scan, secret_scan, access_isolation, migrations, environment_isolation, operational_readiness]
+    runs-on: ubuntu-latest
+    env:
+      HEAD_REPOSITORY: ${{ github.event.repository.full_name }}
+      LINT_STATUS: ${{ needs.lint.result }}
+      TYPECHECK_STATUS: ${{ needs.typecheck.result }}
+      BUILD_STATUS: ${{ needs.build.result }}
+      UNIT_TESTS_STATUS: ${{ needs.unit_tests.result }}
+      INTEGRATION_TESTS_STATUS: ${{ needs.integration_tests.result }}
+      E2E_TESTS_STATUS: ${{ needs.e2e_tests.result }}
+      SECURITY_SCAN_STATUS: ${{ needs.security_scan.result }}
+      DEPENDENCY_SCAN_STATUS: ${{ needs.dependency_scan.result }}
+      SECRET_SCAN_STATUS: ${{ needs.secret_scan.result }}
+      ACCESS_ISOLATION_STATUS: ${{ needs.access_isolation.result }}
+      MIGRATIONS_STATUS: ${{ needs.migrations.result }}
+      ENVIRONMENT_ISOLATION_STATUS: ${{ needs.environment_isolation.result }}
+      OPERATIONAL_READINESS_STATUS: ${{ needs.operational_readiness.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-candidate-${{ github.sha }}
+          path: candidate
+      - name: Record the staging promotion candidate with its gate evidence
+        run: |
+          GATE_RESULTS="$(node ops/release/gate-results.mjs)"
+          node ops/release/record-promotion.mjs --candidate candidate/candidate.json --gate-results "$GATE_RESULTS" --out promotion-record.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: staging-promotion-record-${{ needs.record-candidate.outputs.tree_hash }}
+          path: promotion-record.json
+          retention-days: 90
+
+  # Production compares its OWN checkout against the record a PRIOR staging run produced.
+  # Nothing here is compared against itself and gates_pass is never taken on trust: the record
+  # must carry per-gate evidence for every required gate, the artifact must have been published by
+  # this repository's own staging branch (not a fork, not another workflow), and the record's
+  # provenance must name the artifact the selection actually chose (R3-03).
+  tree-equivalence:
+    if: github.ref == 'refs/heads/main'
+    needs: [record-candidate, gates]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: target
+        name: Recompute the production checkout identity
+        run: node ops/release/record-candidate.mjs --policy-revision "$POLICY_REVISION" --out target.json --github-output "$GITHUB_OUTPUT"
+        env:
+          POLICY_REVISION: ${{ vars.POLICY_REVISION }}
+      - id: locate
+        name: Locate the prior staging run that recorded this tree
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/artifacts?name=${ARTIFACT_NAME}&per_page=100" > artifacts.json
+          node ops/release/select-staging-record.mjs --listing artifacts.json --tree-hash "$TREE_HASH" --staging-branch "$STAGING_BRANCH" --current-run-id "$GITHUB_RUN_ID" --repository-id "$GITHUB_REPOSITORY_ID" --github-output "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_NAME: staging-promotion-record-${{ steps.target.outputs.tree_hash }}
+          TREE_HASH: ${{ steps.target.outputs.tree_hash }}
+          STAGING_BRANCH: staging
+      - uses: actions/download-artifact@v4
+        with:
+          name: staging-promotion-record-${{ steps.target.outputs.tree_hash }}
+          path: staging
+          run-id: ${{ steps.locate.outputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compare the production checkout against the recorded staging candidate
+        run: node ops/release/check-promotion.mjs --record staging/promotion-record.json --target target.json --current-run-id "$GITHUB_RUN_ID" --staging-ref "$STAGING_REF" --repository "$GITHUB_REPOSITORY" --repository-id "$GITHUB_REPOSITORY_ID" --workflow-path "$RELEASE_WORKFLOW_PATH" --selected-run-id "$SELECTED_RUN_ID" --selected-head-sha "$SELECTED_HEAD_SHA"
+        env:
+          STAGING_REF: refs/heads/staging
+          RELEASE_WORKFLOW_PATH: .github/workflows/release.yml
+          SELECTED_RUN_ID: ${{ steps.locate.outputs.run_id }}
+          SELECTED_HEAD_SHA: ${{ steps.locate.outputs.head_sha }}
+
+  apply-migrations:
+    if: github.ref == 'refs/heads/main'
+    needs: [gates, tree-equivalence]
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: production-migration-${{ vars.PRODUCTION_SCHEMA }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs migration-apply
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+          PRODUCTION_SCHEMA: ${{ vars.PRODUCTION_SCHEMA }}
+
+  # R4-03: the build records the CANDIDATE deployment it produced - the un-promoted one - and
+  # publishes its URL and id as job outputs. `smoke` then exercises that deployment instead of the
+  # still-live production alias, and `promote-production` promotes exactly the deployment that was
+  # smoke-tested. `ops/release/record-deployment.mjs` refuses an absent, empty or non-https URL and
+  # refuses the production alias, so a build that records nothing fails here rather than producing
+  # a smoke result about the previous release.
+  production-build:
+    if: github.ref == 'refs/heads/main'
+    needs: [gates, tree-equivalence]
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      deployment_url: ${{ steps.candidate-deployment.outputs.deployment_url }}
+      deployment_id: ${{ steps.candidate-deployment.outputs.deployment_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs production-build
+        env:
+          APP_ENV: production
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      - id: candidate-deployment
+        run: node ops/release/record-deployment.mjs candidate-deployment.json --production-url "$PRODUCTION_URL" --github-output "$GITHUB_OUTPUT"
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate-deployment-${{ github.sha }}
+          path: candidate-deployment.json
+
+  # R7REL-04: before anything is smoked, the candidate's id and URL are re-bound to one another.
+  # `smoke` verifies a URL and `promote-production` promotes an id; until this step existed nothing
+  # required them to describe the same deployment, and the URL came from the last stdout line of the
+  # deploy command - an assumption about the provider CLI (AT-16, open) that a banner would break.
+  # The step re-reads the artefact the build uploaded, requires it to be the pair the build
+  # published as job outputs, and resolves the id through the provider CLI.
+  smoke:
+    if: github.ref == 'refs/heads/main'
+    needs: [gates, tree-equivalence, apply-migrations, production-build]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: candidate-deployment-${{ github.sha }}
+      - run: node ops/release/record-deployment.mjs candidate-deployment.json --production-url "$PRODUCTION_URL" --expect-url "$CANDIDATE_URL" --expect-id "$CANDIDATE_ID" --verify-binding
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+          CANDIDATE_URL: ${{ needs.production-build.outputs.deployment_url }}
+          CANDIDATE_ID: ${{ needs.production-build.outputs.deployment_id }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      - run: node ops/release/run-gate.mjs production-smoke
+        env:
+          PRODUCTION_SMOKE_URL: ${{ needs.production-build.outputs.deployment_url }}
+
+  promote-production:
+    if: github.ref == 'refs/heads/main'
+    needs: [gates, tree-equivalence, apply-migrations, production-build, smoke]
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs promote-production
+        env:
+          CANDIDATE_DEPLOYMENT_ID: ${{ needs.production-build.outputs.deployment_id }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+  post-promotion-health:
+    if: github.ref == 'refs/heads/main'
+    needs: [promote-production]
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      failed_checks: ${{ steps.health.outputs.failed_checks }}
+      total_checks: ${{ steps.health.outputs.total_checks }}
+      consecutive_failures: ${{ steps.health.outputs.consecutive_failures }}
+      provider_outage: ${{ steps.health.outputs.provider_outage }}
+      previous_release_id: ${{ steps.health.outputs.previous_release_id }}
+      previous_release_compatible: ${{ steps.health.outputs.previous_release_compatible }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - id: health-run
+        run: |
+          set +e
+          node ops/release/run-gate.mjs production-health
+          STATUS=$?
+          set -e
+          printf 'status=%s\n' "$STATUS" >> "$GITHUB_OUTPUT"
+        env:
+          PRODUCTION_HEALTH_URL: ${{ vars.PRODUCTION_HEALTH_URL }}
+      - id: health
+        run: node ops/release/health-outputs.mjs health.json --github-output "$GITHUB_OUTPUT"
+      - if: steps.health-run.outputs.status != '0'
+        run: exit 1
+
+  # Recovery. An empty or unparseable health output is NOT a healthy production: the payload builder
+  # turns it into malformed_input, the rollback contract turns that into an incident, and the
+  # incident step below fails the run so it is never silently green (R3-08).
+  rollback-app:
+    if: always() && github.ref == 'refs/heads/main' && needs.promote-production.result == 'success' && needs.post-promotion-health.result == 'failure'
+    needs: [promote-production, post-promotion-health]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with: { version: 11.9.0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - id: decision
+        run: |
+          PAYLOAD="$(node ops/release/rollback-payload.mjs)"
+          DECISION="$(node ops/release/decide-rollback.mjs "$PAYLOAD")"
+          printf 'decision=%s\n' "$DECISION" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$DECISION"
+        env:
+          FAILED_CHECKS: ${{ needs.post-promotion-health.outputs.failed_checks }}
+          TOTAL_CHECKS: ${{ needs.post-promotion-health.outputs.total_checks }}
+          CONSECUTIVE_FAILURES: ${{ needs.post-promotion-health.outputs.consecutive_failures }}
+          PROVIDER_OUTAGE: ${{ needs.post-promotion-health.outputs.provider_outage }}
+          PREVIOUS_RELEASE_ID: ${{ needs.post-promotion-health.outputs.previous_release_id }}
+          PREVIOUS_RELEASE_COMPATIBLE: ${{ needs.post-promotion-health.outputs.previous_release_compatible }}
+          RECENT_ROLLBACKS: ${{ vars.RECENT_ROLLBACKS || 0 }}
+          MAX_ROLLBACKS: ${{ vars.MAX_ROLLBACKS || 2 }}
+          CONFIRM_THRESHOLD: ${{ vars.ROLLBACK_CONFIRM_THRESHOLD || 2 }}
+      - if: contains(steps.decision.outputs.decision, '"action":"rollback"')
+        run: node ops/release/run-gate.mjs rollback-app
+        env:
+          KNOWN_GOOD_DEPLOYMENT_ID: ${{ needs.post-promotion-health.outputs.previous_release_id }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      - name: Raise an incident instead of ending green
+        if: contains(steps.decision.outputs.decision, '"action":"incident"')
+        run: |
+          printf 'Post-promotion health could not be trusted: %s\n' "$DECISION" >&2
+          exit 1
+        env:
+          DECISION: ${{ steps.decision.outputs.decision }}

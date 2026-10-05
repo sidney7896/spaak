@@ -1,0 +1,5 @@
+# Dependency build scripts are deliberately not executed (supply-chain hygiene); none are needed here.
+allowBuilds:
+  "@sentry/cli": false
+  core-js: false
+  unrs-resolver: false

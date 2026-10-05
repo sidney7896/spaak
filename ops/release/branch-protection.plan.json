@@ -1,0 +1,112 @@
+{
+  "version": 3,
+  "applies_to": "a project generated from the launch standard",
+  "status": "PLAN - nothing in this file has been applied to GitHub or any other provider",
+  "why": [
+    "ops/release/validate-workflows.mjs refuses any workflow whose name is not one of the canonical",
+    "ones, refuses production capability outside release.yml's canonical production jobs, pins the",
+    "canonical set with ops/release/workflow-templates.sha256 and pins the delivered digest manifest",
+    "and release policy against the standard that generated this project. None of that defends the",
+    "repository against someone who can commit anything to it: that person can edit the delivered",
+    "gate itself. D-014 puts the residual risk on branch protection and review, and this file is that",
+    "control, delivered with the project (R4-06).",
+    "Apply it with the repository owner's authenticated identity before the first production release."
+  ],
+  "apply": {
+    "applied": false,
+    "applied_at": null,
+    "signed_off_by": null,
+    "how": "Settings > Branches > Add branch ruleset, or the GitHub API with an identity that owns the repository. Record the application in the project's operation record; this file is a plan, not evidence."
+  },
+  "defaults": {
+    "require_pull_request": true,
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews": true,
+    "require_conversation_resolution": true,
+    "require_branches_up_to_date": true,
+    "required_status_checks": [
+      "ci-workflow-validation",
+      "ci-lint",
+      "ci-typecheck",
+      "ci-unit-integration",
+      "ci-build",
+      "ci-dependency-scan",
+      "ci-secret-scan",
+      "ci-release-controls",
+      "ci-gates",
+      "record-candidate",
+      "workflow-validation",
+      "lint",
+      "typecheck",
+      "build",
+      "unit_tests",
+      "integration_tests",
+      "e2e_tests",
+      "security_scan",
+      "dependency_scan",
+      "secret_scan",
+      "access_isolation",
+      "migrations",
+      "environment_isolation",
+      "operational_readiness",
+      "gates"
+    ],
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "block_creations": false,
+    "lock_branch": false,
+    "enforce_admins": true,
+    "bypass_pull_request_allowances": {
+      "users": [],
+      "teams": [],
+      "apps": []
+    },
+    "restrict_pushes_to": ["responsible-integration-identity"]
+  },
+  "branches": {
+    "dev": { "inherits": "defaults" },
+    "staging": { "inherits": "defaults" },
+    "main": { "inherits": "defaults", "required_signatures": true }
+  },
+  "workflow_validation": {
+    "required": ["ci-workflow-validation", "workflow-validation"],
+    "why": "R5-03: the gate that enforces D-014 is the control the design's residual risk rests on, so it is a required check in its own right. It was previously excluded because ci.yml and release.yml shared the job id 'workflow-validation' and GitHub matches a required check by NAME.",
+    "closed_by": "R4-08: every job of ci.yml now carries the 'ci-' prefix, so no job id is shared between the two canonical workflows and every required check above names exactly one job.",
+    "every_required_check_depends_on_it": "In ci.yml every job needs ci-workflow-validation. In release.yml every required gate job needs workflow-validation, which needs record-candidate. A pull request whose workflow validation fails therefore has no green required check except record-candidate, and record-candidate alone does not satisfy this rule."
+  },
+  "release_controls_self_test": {
+    "required": ["ci-release-controls"],
+    "why": "R7REL-02: the delivered release CLIs used to be test-free in the only repository where they are the last line of defence, so a single line in a shared helper turned every one of them into a silent exit 0 with an empty log and a green pipeline. ops/release/release-controls.test.mjs runs every delivered CLI - and every project ops script - against a fixture it must refuse. R8REL-03: a green ci-release-controls used to be compatible with a self-test that had switched ITSELF off (one line: const installed = false, sixteen of seventeen cases skipped, exit 0). It is no longer the only guard: ops/release/check-project-scripts.mjs pins the self-test by digest and refuses a skipped, shortened, edited or deleted one, and that check runs in workflow-validation / ci-workflow-validation, which every other job needs. A neutered control now fails a required check even if this job is green.",
+    "covers": "validate-workflows, check-project-scripts, run-gate, secret-scan, required-gates, gate-results, evaluate-gates, decide-rollback, rollback-payload, health-outputs, record-candidate, record-promotion, check-promotion, select-staging-record, record-deployment, and the project ops scripts smoke, health, promote, rollback, render-migration and check-standard (R8REL-01). D-025: it also reads this project's own workflows and fails when a gate step is spelled as `pnpm run`, `pnpm exec vitest` or with a bare `--` separator instead of `node ops/release/run-gate.mjs <gate>`."
+  },
+  "code_owner_review": {
+    "paths": [
+      ".project-launch-starter.json",
+      ".github/",
+      "ops/",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      ".npmrc",
+      ".pnpmfile.cjs",
+      "tsconfig.json",
+      "eslint.config.mjs",
+      "next.config.ts",
+      ".env.example",
+      "standard/",
+      "tests/browser/"
+    ],
+    "why": "R9REL-01/R9REL-02 (D-025): pnpm-workspace.yaml, .npmrc and .pnpmfile.cjs are listed although a managed project carries none of them - ops/release/run-gate.mjs refuses a gate in any repository that carries one the gate declaration does not name. Listing them here is the second half of the same rule: if one ever becomes legitimate it arrives as a reviewed diff. Three words in the first file (scriptShell: /usr/bin/true) turned every `pnpm run <gate>` into exit 0 with package.json byte-identical, and one vitest.config.js with passWithNoTests made a required gate green with zero tests executed; neither was a control by the previous predicate and neither touched a reviewed path. next.config.ts and .env.example are here because they are gate inputs a project really has. R7REL-01/R7REL-02: the delivered controls claim exactly two things - no downgrade is possible through DATA alone, and every code path a downgrade would need is under code-owner review. The second claim failed twice in the seventh review (ops/release/entrypoint.mjs was one line away from turning every release CLI into a silent exit 0 and was listed nowhere; a tree could be re-classified as 'the standard' by relocating delivered controls) and twice more in the eighth. The list is therefore whole DIRECTORIES plus the named configuration files the gates actually read. R8REL-01: ops/ - not ops/release/ - because the project's own ops scripts ARE gates (ops/render-migration.mjs is the migrations gate, ops/check-standard.mjs is operational_readiness) and the pre-promotion smoke, the post-promotion health, the promotion and the rollback all run from there; the previous entry covered none of them. R8REL-02: package.json, because `pnpm run <gate>` runs whatever that file says and one word there made the pre-promotion smoke gate vacuous with no diff in any reviewed path; pnpm-lock.yaml and tsconfig.json are here for the same reason (what --frozen-lockfile resolves, and what the typecheck gate checks), and eslint.config.mjs decides what the lint gate reports. .github/ - not .github/workflows/ - so dependabot.yml, which governs automated dependency pull requests, is covered too. .project-launch-starter.json covers templateVersion and releaseControlsSha256, and standard/ covers the only code that can put this repository into standard mode (standard/check-standard.mjs). R8REL-05: ops/release/release-controls.test.mjs now WALKS this repository and requires every file that is a control by nature - anything under .github/ or ops/, any executable module, any of the gate-configuration files above - to be covered by one of these entries. The previous derivation walked exactly the directories this list named, so it could not fail for the control that escaped them; this one fails for a new control anywhere in the tree. tests/browser/ holds the browser walk (Playwright configuration and tests) that the new-klus knob runs against the preview before a proefrit (roadmap 11H), so it is a quality gate too.",
+    "how": "A CODEOWNERS entry for these paths plus 'require review from Code Owners' on the ruleset. Not applied by this plan."
+  },
+  "notes": [
+    "enforce_admins true and empty bypass allowances are the point: a protection an administrator can",
+    "skip does not carry the residual risk D-014 assigns to it.",
+    "The production jobs (apply-migrations, production-build, smoke, promote-production,",
+    "post-promotion-health, rollback-app) and the branch-conditional jobs (staging-evidence,",
+    "tree-equivalence) run only on their own branch and are not listed as required checks:",
+    "they are the release itself, not a merge precondition. Protect them with the 'production'",
+    "GitHub environment (required reviewers and its own secrets), not with a branch rule.",
+    "The plan does not authorize destructive production data actions and grants no provider access."
+  ]
+}

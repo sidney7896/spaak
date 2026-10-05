@@ -1,0 +1,164 @@
+name: CI
+
+on:
+  push:
+    branches: [feature/**, dev, staging, main]
+  pull_request:
+    branches: [dev, staging, main]
+
+# Pull requests are untrusted. This workflow has no deployment environment or secret access.
+# This file is canonical: ops/release/validate-workflows.mjs requires every file under
+# .github/workflows/ to be byte-identical to its rendering of ops/release/workflow-templates/,
+# so a workflow that is not this one cannot exist in a managed repository (D-014).
+#
+# R4-08: every job id carries the `ci-` prefix. ci.yml and release.yml trigger on the same branches
+# and GitHub matches a required status check by check-run NAME, so two jobs called `lint` in two
+# workflows made a branch rule unable to say which one it meant. Nothing here may be named after a
+# required gate of standard/policy/global-policy.yaml: since R5-01 only release.yml may define those.
+#
+# R5-03: `ci-workflow-validation` runs first and every other job needs it, so a pull request that
+# adds or edits a workflow file cannot have a single green required check.
+#
+# D-025 (R9REL-01/02/03/05): every gate step below is `node ops/release/run-gate.mjs <gate>` and
+# nothing else. What each gate runs is the argv array ops/release/gates.json pins, executed without
+# a shell and without the package-manager script layer. `pnpm run <gate>` was redirected by three
+# words in pnpm-workspace.yaml, `pnpm exec vitest run <dir>` was made vacuous by one vitest.config.js
+# with passWithNoTests, and `pnpm run <name> -- <args>` handed the literal token `--` to scripts that
+# refuse it. ops/release/check-project-scripts.mjs refuses all three spellings in this file.
+permissions:
+  contents: read
+
+jobs:
+  # The controls gate runs FIRST, on a bare checkout, before any job has installed anything: a
+  # pnpm-workspace.yaml or .npmrc that nothing declared decides what `pnpm install` executes, so it
+  # has to be refused before an install reads it. Every other job needs this one.
+  ci-workflow-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node ops/release/run-gate.mjs controls
+      - run: node ops/release/validate-workflows.mjs .
+      - run: node ops/release/check-project-scripts.mjs .
+
+  ci-lint:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs lint
+
+  ci-typecheck:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs typecheck
+
+  ci-unit-integration:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs unit_integration_tests
+
+  ci-build:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs build
+
+  ci-dependency-scan:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs dependency_scan
+
+  # The release helpers import node: builtins only (R3-04); a bare checkout is enough to run them.
+  ci-secret-scan:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node ops/release/run-gate.mjs secret_scan
+
+  # R7REL-02: the delivered release controls test THEMSELVES here. Every CLI under ops/release/ is
+  # run against a fixture it must refuse, so a control that stopped checking - a neutered
+  # entry-point test, a removed refusal - makes this required check red instead of exiting 0 with
+  # an empty log. Until this job existed a generated project received fourteen release CLIs and no
+  # test over any of them, which is what made one line in a shared helper a silent, total bypass.
+  #
+  # R9REL-02: a green check here used to be compatible with ZERO tests executed - one vitest.config.js
+  # with `passWithNoTests: true` excluded this very file and vitest exited 0. The gate now runs with
+  # the pinned ops/release/vitest.gate.config.mjs and the runner compares the tests this run actually
+  # collected with the minimum ops/release/gates.json pins, so the check proves execution.
+  ci-release-controls:
+    needs: [ci-workflow-validation]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: node ops/release/run-gate.mjs release_controls
+
+  ci-gates:
+    needs: [ci-workflow-validation, ci-lint, ci-typecheck, ci-unit-integration, ci-build, ci-dependency-scan, ci-secret-scan, ci-release-controls]
+    runs-on: ubuntu-latest
+    env:
+      REQUIRED: '["ci-lint","ci-typecheck","ci-unit-integration","ci-build","ci-dependency-scan","ci-secret-scan","ci-release-controls","ci-workflow-validation"]'
+      CI_LINT_STATUS: ${{ needs.ci-lint.result }}
+      CI_TYPECHECK_STATUS: ${{ needs.ci-typecheck.result }}
+      CI_UNIT_INTEGRATION_STATUS: ${{ needs.ci-unit-integration.result }}
+      CI_BUILD_STATUS: ${{ needs.ci-build.result }}
+      CI_DEPENDENCY_SCAN_STATUS: ${{ needs.ci-dependency-scan.result }}
+      CI_SECRET_SCAN_STATUS: ${{ needs.ci-secret-scan.result }}
+      CI_RELEASE_CONTROLS_STATUS: ${{ needs.ci-release-controls.result }}
+      CI_WORKFLOW_VALIDATION_STATUS: ${{ needs.ci-workflow-validation.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          RESULTS="$(node ops/release/gate-results.mjs --required "$REQUIRED")"
+          node ops/release/evaluate-gates.mjs --required "$REQUIRED" --results "$RESULTS"

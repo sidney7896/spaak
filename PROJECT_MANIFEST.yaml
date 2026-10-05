@@ -1,0 +1,122 @@
+# Contract template. Null means unresolved; it is never evidence of readiness.
+schema_version: "1.0"
+standard_version: "1.0"
+topology: shared
+project:
+  id: null
+  slug: spaak
+  display_name: Fietsenmakerij De Spaak (verzonnen)
+  client_id: null
+  purpose: null
+  ownership: central_transferable
+  customer_delivery_model: null
+registry:
+  project_id: null
+  revision: null
+  generated_at: null
+  policy_git_revision: null
+  policy_hash: null
+source:
+  repository_url: null
+  default_branch: main
+  template_version: "1.0.0"
+  technical_docs_path: docs
+  handoff_path: HANDOFF.md
+  business_documents_url: null
+capabilities:
+  authentication: true
+  file_uploads: false
+  payments: false
+  ai: false
+  background_jobs: null
+  analytics: false
+  session_replay: false
+providers:
+  hosting: vercel
+  backend: supabase
+  auth: supabase
+  application_storage: supabase_storage
+  secrets: infisical
+  errors: sentry
+  analytics: posthog
+  feature_flags: posthog
+  transactional_email: resend
+  uptime: better_stack
+  dns: cloudflare
+  registrar_default: cloudflare
+  ai_default: openai
+  payments_nl: mollie
+  payments_international: stripe
+  external_backup_destination: null
+connections:
+  github: { registry_connection_id: null }
+  vercel: { registry_connection_id: null }
+  supabase: { registry_connection_id: null }
+  infisical: { registry_connection_id: null }
+  sentry: { registry_connection_id: null }
+  posthog: { registry_connection_id: null }
+  resend: { registry_connection_id: null }
+  better_stack: { registry_connection_id: null }
+  cloudflare: { registry_connection_id: null }
+  google_drive: { registry_connection_id: null }
+environments:
+  dev:
+    git_branch: dev
+    logical_environment: development
+    vercel_target: preview
+    vercel_branch_scope: dev
+    vercel_project_id: null
+    supabase_resource_id: null
+    supabase_schema: app_spaak_dev
+    infisical_project_id: null
+    infisical_environment: dev
+    application_url: null
+    data_policy: synthetic_only
+  staging:
+    git_branch: staging
+    logical_environment: staging
+    vercel_target: staging
+    vercel_branch_scope: staging
+    vercel_project_id: null
+    supabase_resource_id: null
+    supabase_schema: app_spaak_stg
+    infisical_project_id: null
+    infisical_environment: staging
+    application_url: null
+    data_policy: synthetic_or_approved_sanitized
+  production:
+    git_branch: main
+    logical_environment: production
+    vercel_target: production
+    vercel_branch_scope: main
+    vercel_project_id: null
+    supabase_resource_id: null
+    supabase_schema: app_spaak_prod
+    infisical_project_id: null
+    infisical_environment: production
+    application_url: null
+    data_policy: project_authorized_customer_data
+secret_references: []
+operations:
+  responsible_principal_refs: []
+  workers_direct_devops: false
+  human_destructive_approval_required: true
+  automatic_release_after_gates: true
+budget:
+  currency: EUR
+  monthly_project_ceiling: null
+  provider_ceilings: {}
+  platform_allocation_policy_ref: null
+  approved_by_principal_ref: null
+  approved_policy_revision: null
+recovery:
+  external_backup_resource_ref: null
+  last_backup_evidence_ref: null
+  last_restore_evidence_ref: null
+  previous_compatible_release_ref: null
+  emergency_runbook_ref: null
+readiness:
+  status: SPECIFIED
+  verified_at: null
+  evidence_index_ref: null
+  unresolved_external_prerequisites: []

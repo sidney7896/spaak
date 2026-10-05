@@ -1,0 +1,7 @@
+{
+  "templateVersion": "1.0.0",
+  "slug": "spaak",
+  "client": "Fietsenmakerij De Spaak (verzonnen)",
+  "topology": "shared",
+  "releaseControlsSha256": "030ea3033f1d12788dfce7aec7a311fb62509524cbf09bf3e354c38c56d06311"
+}

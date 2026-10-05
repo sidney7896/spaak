@@ -1,0 +1,35 @@
+{
+  "schemaVersion": "1.0",
+  "auth": {
+    "providers": {
+      "google": false,
+      "microsoft": false,
+      "apple": false,
+      "magicLink": true
+    }
+  },
+  "signupMode": "invite-only",
+  "modules": {
+    "payments": {
+      "enabled": false
+    },
+    "ai": {
+      "enabled": false
+    },
+    "email": {
+      "enabled": false
+    },
+    "analytics": {
+      "enabled": false
+    },
+    "sentry": {
+      "enabled": false
+    },
+    "fileUpload": {
+      "enabled": false
+    }
+  },
+  "slug": "spaak",
+  "client": "Fietsenmakerij De Spaak (verzonnen)",
+  "topology": "shared"
+}

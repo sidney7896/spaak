@@ -1,0 +1,21 @@
+release:
+  # Mirrors release.required_gates and release.production_job of the standard's
+  # standard/policy/global-policy.yaml; ops/release/release.test.mjs keeps the two equal.
+  # This file is a DELIVERED release control: ops/release/validate-workflows.mjs pins its digest
+  # against the standard, and the canonical gate set below may never be shrunk here - the gate's
+  # own CANONICAL_REQUIRED_GATES refuses a policy that omits one of these names.
+  required_gates:
+    - lint
+    - typecheck
+    - build
+    - unit_tests
+    - integration_tests
+    - e2e_tests
+    - security_scan
+    - dependency_scan
+    - secret_scan
+    - access_isolation
+    - migrations
+    - environment_isolation
+    - operational_readiness
+  production_job: promote-production

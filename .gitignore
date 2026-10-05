@@ -1,0 +1,17 @@
+node_modules/
+.next/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+.vercel/
+*.log
+*.tsbuildinfo
+*.pem
+ops/.rendered/
+health.json
+candidate.json
+candidate-deployment.json
+promotion-record.json
+test-results/

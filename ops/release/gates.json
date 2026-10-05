@@ -1,0 +1,218 @@
+{
+  "comment": [
+    "THE GATE DECLARATION of a generated project (D-025). Delivered as ops/release/gates.json.",
+    "",
+    "Every `run:` step of the canonical ci.yml and release.yml that runs a gate or an ops script is",
+    "`node ops/release/run-gate.mjs <gate>` and nothing else. What that gate RUNS is here, as an argv",
+    "ARRAY - never a command line, never a package-manager script layer, never a shell, and never a",
+    "`--` separator. The ninth review measured, in a real generated project, why the previous shape",
+    "could not be repaired by pinning one more file inside it:",
+    "  R9REL-01  pnpm-workspace.yaml with `scriptShell: /usr/bin/true` turned EVERY `pnpm run <gate>`",
+    "            into exit 0 with package.json byte-identical, and no delivered control read it.",
+    "  R9REL-02  vitest.config.js with `passWithNoTests: true` made ci-release-controls green with",
+    "            zero tests executed and made six required gates vacuous.",
+    "  R9REL-03  pnpm 11.9.0 forwards `--`, so seven steps handed the literal token `--` to an ops",
+    "            script that refuses unknown arguments: the required `migrations` gate was red by",
+    "            construction and the whole production lane failed on its first argument.",
+    "  R9REL-05  a `node` entry in node_modules/.bin made a pinned body exit 0, body untouched.",
+    "",
+    "`controls` is the closed list of files that can change what a gate does. The PATTERNS are a",
+    "constant of ops/release/run-gate.mjs, so this file can only say what is allowed, never widen",
+    "what is looked for. A root-level pnpm-workspace.yaml, .npmrc, .pnpmfile.cjs, vitest.config.*,",
+    "vitest.workspace.*, vite.config.* or .env is declared by NO entry here and is therefore refused:",
+    "that is R9REL-01 and R9REL-02 closed by absence rather than by interpretation.",
+    "",
+    "`minimumTests` is a FLOOR. The standard cannot know how many tests a customer project has, and a",
+    "floor never breaks a project that adds tests; what it makes impossible is the measured defect -",
+    "a green test gate that collected nothing. Raise these numbers in your own project as its suite",
+    "grows: a floor that tracks reality also catches a test directory that quietly stopped running.",
+    "`release_controls` is the exception and is pinned exactly, because the file it runs is delivered",
+    "and its case count is the standard's, not the project's."
+  ],
+  "version": 1,
+  "vitestConfig": "ops/release/vitest.gate.config.mjs",
+  "tools": {
+    "vitest": { "package": "vitest", "bin": "vitest" },
+    "tsc": { "package": "typescript", "bin": "tsc" },
+    "eslint": { "package": "eslint", "bin": "eslint" },
+    "next": { "package": "next", "bin": "next" }
+  },
+  "controls": {
+    "package.json": { "pin": "project" },
+    "tsconfig.json": { "pin": "project" },
+    "eslint.config.mjs": { "pin": "project" },
+    "next.config.ts": { "pin": "project" },
+    ".env.example": { "pin": "project" },
+    "pnpm-workspace.yaml": {
+      "pin": "sha256",
+      "sha256": "6abf9513d579d4520e53fd9de0d18fcbfae028a21a40109b17cff02c4dd5e21f",
+      "why": "written by the generator, because pnpm 11 refuses an install without a dependency build-script policy; pnpm reads scriptShell and that policy here, so this file is pinned by content and a change to it is a reviewed change (R9REL-01)."
+    },
+    "ops/release/vitest.gate.config.mjs": {
+      "pin": "sha256",
+      "sha256": "6f70c394fec43448ca76ce0d0c273885dd94a9c6c0ae8ef15bbe21cb5e1910af",
+      "why": "the only vitest configuration any gate uses; it forbids passWithNoTests (R9REL-02)."
+    }
+  },
+  "gates": {
+    "controls": {
+      "kind": "controls",
+      "required": true,
+      "purpose": "prove that every file which can change what a gate runs is declared and in the state this declaration pins; it runs in workflow-validation and ci-workflow-validation, the checkout-only jobs every other job depends on, so an undeclared package-manager configuration is refused before any install has read it"
+    },
+    "lint": {
+      "kind": "tool",
+      "tool": "eslint",
+      "packageScript": "lint",
+      "argv": ["--config", "eslint.config.mjs", "."],
+      "required": true,
+      "purpose": "static lint of the whole project; the lint gate"
+    },
+    "typecheck": {
+      "kind": "tool",
+      "tool": "tsc",
+      "packageScript": "typecheck",
+      "argv": ["--noEmit", "-p", "tsconfig.json"],
+      "required": true,
+      "purpose": "TypeScript project check without emit, against the pinned project file; the typecheck gate"
+    },
+    "build": {
+      "kind": "tool",
+      "tool": "next",
+      "packageScript": "build",
+      "argv": ["build"],
+      "required": true,
+      "purpose": "ordinary application build; the build gate"
+    },
+    "unit_tests": {
+      "kind": "vitest",
+      "paths": ["tests/unit"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the unit_tests gate"
+    },
+    "integration_tests": {
+      "kind": "vitest",
+      "paths": ["tests/integration"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the integration_tests gate"
+    },
+    "e2e_tests": {
+      "kind": "vitest",
+      "paths": ["tests/e2e", "tests/security"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the e2e_tests gate"
+    },
+    "security_scan": {
+      "kind": "vitest",
+      "paths": ["tests/security"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the security_scan gate"
+    },
+    "access_isolation": {
+      "kind": "vitest",
+      "paths": ["tests/rls"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the access_isolation gate"
+    },
+    "environment_isolation": {
+      "kind": "vitest",
+      "paths": ["tests/config", "tests/rls"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the environment_isolation gate"
+    },
+    "unit_integration_tests": {
+      "kind": "vitest",
+      "paths": ["tests/unit", "tests/integration"],
+      "minimumTests": 1,
+      "required": true,
+      "purpose": "the ci-unit-integration check of the pull-request workflow"
+    },
+    "release_controls": {
+      "kind": "vitest",
+      "paths": ["ops/release/release-controls.test.mjs"],
+      "minimumTests": 29,
+      "required": true,
+      "purpose": "the delivered self-test of the release controls; the ci-release-controls check",
+      "note": "Pinned exactly. This file is delivered, its case count is the standard's, and the whole point of the gate is that it RAN: the digest pin in check-project-scripts.mjs proves the file is the pinned one, this number proves its cases were executed (R9REL-02)."
+    },
+    "dependency_scan": {
+      "kind": "manager",
+      "manager": "pnpm",
+      "argv": ["audit", "--audit-level", "high"],
+      "required": true,
+      "purpose": "advisory audit of the resolved dependency tree",
+      "note": "An audit is the package manager's own operation, so it is the one gate whose program is taken from PATH; run-gate.mjs refuses a pnpm whose real path lies inside the repository being gated."
+    },
+    "secret_scan": {
+      "kind": "control",
+      "script": "ops/release/secret-scan.mjs",
+      "argv": [".", "--root", ".", "--allowlist", "ops/release/secret-scan.allowlist"],
+      "required": true,
+      "purpose": "the bundled secret scan over this repository"
+    },
+    "migrations": {
+      "kind": "ops",
+      "script": "ops/render-migration.mjs",
+      "packageScript": "migration:check",
+      "argv": ["--check", "--environment", "production", "--schema", { "env": "PRODUCTION_SCHEMA" }],
+      "required": true,
+      "purpose": "verify the migration set against the production schema without applying it; the migrations gate"
+    },
+    "operational_readiness": {
+      "kind": "ops",
+      "script": "ops/check-standard.mjs",
+      "packageScript": "check:standard",
+      "argv": [],
+      "required": true,
+      "purpose": "operational readiness check against the launch standard; the operational_readiness gate"
+    },
+    "migration-apply": {
+      "kind": "ops",
+      "script": "ops/render-migration.mjs",
+      "packageScript": "migration:apply",
+      "argv": ["--apply", "--environment", "production", "--schema", { "env": "PRODUCTION_SCHEMA" }],
+      "purpose": "apply migrations to the production schema; runs only in the production environment job"
+    },
+    "production-build": {
+      "kind": "ops",
+      "script": "ops/build-production.mjs",
+      "packageScript": "build:production",
+      "argv": ["--no-domain-assignment", "--deployment-url-file", "candidate-deployment.json"],
+      "purpose": "production-configured build without domain assignment; also records the candidate deployment"
+    },
+    "production-smoke": {
+      "kind": "ops",
+      "script": "ops/smoke.mjs",
+      "packageScript": "smoke:production",
+      "argv": ["--max-requests", "20", "--read-only"],
+      "purpose": "bounded read-only smoke check against the candidate deployment before promotion"
+    },
+    "promote-production": {
+      "kind": "ops",
+      "script": "ops/promote.mjs",
+      "packageScript": "promote:production",
+      "argv": ["--verified-build", "--no-domain-assignment", "--deployment", { "env": "CANDIDATE_DEPLOYMENT_ID" }],
+      "purpose": "promote the smoke-tested candidate to production; the single production promotion owner"
+    },
+    "production-health": {
+      "kind": "ops",
+      "script": "ops/health.mjs",
+      "packageScript": "health:production",
+      "argv": ["--bounded", "--max-requests", "20", "--output", "health.json"],
+      "purpose": "bounded post-promotion health check writing health.json"
+    },
+    "rollback-app": {
+      "kind": "ops",
+      "script": "ops/rollback.mjs",
+      "packageScript": "rollback:app",
+      "argv": ["--deployment", { "env": "KNOWN_GOOD_DEPLOYMENT_ID" }, "--preserve-database"],
+      "purpose": "application-only rollback to a known good deployment; never restores a database"
+    }
+  }
+}

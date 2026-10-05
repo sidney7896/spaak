@@ -1,0 +1,7 @@
+# Reviewed digest manifest of the canonical workflow templates (D-014, R4-01).
+# ops/release/validate-workflows.mjs verifies every template against this file, so adding,
+# removing or editing a canonical workflow fails the workflow-validation gate until the change
+# is reflected here in the same reviewed commit. Regenerate inside the template directory with:
+#   shasum -a 256 *.yml
+7d8952dc425d7ed09bbc28827de814013f97b64865175a9875ed26edf68b5633  ci.yml
+852008cdfe091dc6e3ace696023660344ef3cb5d3250528a4f2e5a96b915c1fe  release.yml
