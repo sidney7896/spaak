@@ -12,6 +12,9 @@ import { BookingFlow } from "../../src/components/spaak/booking-flow";
  * Repair 1 (05-10, Sol review of fb0e573): going back to the slots after a lost response made a new key and could
  * book twice (medium); elapsed slots of today were selectable (medium); the root layout loaded Google fonts, so an
  * offline build failed (medium).
+ *
+ * Repair 2 (05-10, Sol review of cd9cfc4, the last automatic repair): when the lost booking had taken the last place,
+ * going back made it unreachable (medium). An unresolved submission now stays recoverable from every step.
  */
 
 type Reply = { status: number; body: unknown } | "network-error" | "hang";
@@ -225,5 +228,35 @@ describe("repair 1", () => {
     const offenders = walk(join(process.cwd(), "src")).filter((f) => /\.(ts|tsx|css)$/.test(f))
       .filter((f) => /next\/font\/google|fonts\.googleapis\.com/.test(readFileSync(f, "utf8")));
     expect(offenders).toEqual([]);
+  });
+});
+
+describe("repair 2", () => {
+  it("keeps an unanswered booking recoverable when its slot has filled up meanwhile", async () => {
+    replies.afspraken = ["network-error", { status: 201, body: BOOKED }];
+    replies["dag:2026-10-09"] = [{ status: 200, body: DAY }, { status: 200, body: { ...DAY, tijdvakken: [
+      { start: "09:00", eind: "10:00", vrij: 0, capaciteit: 2 },
+      { start: "10:00", eind: "11:00", vrij: 0, capaciteit: 2 }] } }];
+    await toDetails();
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Ander tijdvak kiezen" }));
+    const full = await screen.findByRole("button", { name: /10:00\s*[–-]\s*11:00.*Vol/ });
+    expect((full as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "Vorige aanvraag opnieuw versturen" }));
+    await screen.findByRole("heading", { name: "Je afspraak staat" });
+    expect(screen.getByLabelText("Afspraakcode").textContent).toBe("R7TQ2D");
+    const posts = bookingPosts();
+    expect(posts).toHaveLength(2);
+    const keys = posts.map((c) => new Headers(c.init?.headers).get("idempotency-key"));
+    expect(keys[0]).toBe(keys[1]);
+    expect(JSON.parse(String(posts[1].init?.body))).toEqual(JSON.parse(String(posts[0].init?.body)));
+  });
+
+  it("offers no recovery button when nothing is pending", async () => {
+    render(<BookingFlow initialDate="2026-10-09" />);
+    await screen.findByRole("button", { name: /Onderhoudsbeurt/ });
+    expect(screen.queryByRole("button", { name: "Vorige aanvraag opnieuw versturen" })).toBeNull();
   });
 });
