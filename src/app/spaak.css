@@ -156,6 +156,16 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 
 /* Workshop tablet: the customer's D1 choice, four large controls in two rows. */
 .spaak-workshop { max-width: 960px; }
+.spaak-owner { max-width: 1120px; }
+.spaak-owner-settings h2 { margin: 0 0 18px; font: 700 28px/1.2 var(--spaak-serif); }
+.spaak-owner-settings h3 { margin: 0 0 10px; font: 700 23px/1.2 var(--spaak-serif); }
+.spaak-owner-columns { display: grid; gap: 36px; margin-top: 24px; }
+.spaak-owner-repairs { list-style: none; margin: 0 0 24px; padding: 0; }
+.spaak-owner-repairs :is(strong, span) { display: block; }
+.spaak-owner-slots { display: grid; gap: 16px; margin-top: 24px; }
+.spaak-owner-slots .spaak-panel { margin: 0; }
+.spaak-owner-settings .spaak-owner-hint { margin: 8px 0 0; color: var(--spaak-muted); font-size: 16px; }
+.spaak-owner-settings a.spaak-button, .spaak-owner a.spaak-button { text-decoration: none; }
 .spaak-workshop .spaak-shop-header { padding: 20px 24px; background: var(--spaak-ink); color: var(--spaak-bg); border-radius: 18px; }
 .spaak-workshop .spaak-shop-subtitle { color: var(--spaak-line); }
 .spaak-workshop .spaak-wheel { color: var(--spaak-honey); }
@@ -179,6 +189,7 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 body:has(.spaak-workshop) :is(a, button) { min-height: 56px; min-width: 56px; }
 body:has(.spaak-workshop) .nav :is(a, button) { min-height: 56px; min-width: 56px; }
 @media (min-width: 720px) {
+  .spaak-owner-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
   .spaak-workshop-slot { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 0 20px; border-top: 3px solid var(--spaak-line); padding-top: 20px; }
   .spaak-workshop-slot h2 { grid-column: 1; grid-row: 1; align-self: start; position: sticky; top: 16px; }
   .spaak-workshop-slot article { grid-column: 2; }
