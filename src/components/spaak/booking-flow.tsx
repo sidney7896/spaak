@@ -15,6 +15,7 @@ type Confirmation = { code: string; afspraak: Summary };
 type FieldErrors = Partial<Record<keyof BookingInput, string>>;
 type ApiRequest = { kind: "repairs" } | { kind: "day"; date: string }
   | { kind: "booking"; input: BookingInput; key: string };
+type Submission = Extract<ApiRequest, { kind: "booking" }>;
 type Notice = { message: string; retry?: ApiRequest };
 
 const HEADINGS = ["Wat moet er aan je fiets gebeuren?", "Wanneer kom je?", "Wie ben je?", "Je afspraak staat"];
@@ -110,7 +111,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
   const [busy, setBusy] = useState(false);
   const active = useRef<AbortController | null>(null);
   const generation = useRef(0);
-  const submission = useRef<Extract<ApiRequest, { kind: "booking" }> | null>(null);
+  const [submission, setSubmission] = useState<Submission | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const fieldPrefix = useId();
 
@@ -135,14 +136,14 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
         }
         setErrors(fieldErrors);
         setNotice({ message: "Controleer je gegevens en probeer het nog eens." });
-        submission.current = null;
+        setSubmission(null);
       } else if (task.kind === "booking" && status === 409) {
         const message = body.reden === "vol" ? "Dit tijdvak is net vol geraakt. Kies een ander tijdvak."
           : body.reden === "gesloten" ? "Op deze dag is de werkplaats gesloten. Kies een andere dag."
             : body.reden === "sleutel" ? "Deze aanvraag hoort bij andere gegevens. Probeer het opnieuw."
               : "Dit tijdvak is al voorbij. Kies een ander tijdvak.";
         setNotice({ message });
-        submission.current = null;
+        setSubmission(null);
       } else if (status < 200 || status >= 300) {
         throw new Error("We konden je aanvraag niet verwerken. Probeer het opnieuw.");
       } else if (task.kind === "repairs") {
@@ -154,7 +155,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       } else {
         if (status !== 200 && status !== 201) throw new Error("Je afspraak is nog niet bevestigd. Probeer het opnieuw.");
         if (typeof body.code !== "string" || !record(body.afspraak)) throw new Error("De bevestiging kon niet worden gelezen.");
-        submission.current = null;
+        setSubmission(null);
         setConfirmation(body as Confirmation);
         setStep(4);
       }
@@ -209,10 +210,10 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       naam: contact.naam.trim(), telefoon: contact.telefoon.trim(), email: contact.email.trim(), fiets: contact.fiets.trim(),
       repairTypeId: repair.id, date, start: slot.start,
     };
-    if (!submission.current || JSON.stringify(submission.current.input) !== JSON.stringify(input)) {
-      submission.current = { kind: "booking", input, key: crypto.randomUUID() };
-    }
-    void execute(submission.current);
+    // Resolve the previous request before creating another booking identity.
+    const task: Submission = submission ?? { kind: "booking", input, key: crypto.randomUUID() };
+    setSubmission(task);
+    void execute(task);
   }
 
   function summary(value: Summary) {
@@ -229,6 +230,11 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       <p className="spaak-step-label">{["Reparatie", "Dag en tijd", "Je gegevens", "Klaar"][step - 1]}</p>
     </div></div>
     <h1 id={`${fieldPrefix}-heading`} ref={heading} tabIndex={-1}>{HEADINGS[step - 1]}</h1>
+    {submission && <div className="spaak-pending">
+      <p>Je vorige aanvraag is nog niet bevestigd.</p>
+      <button className="spaak-button spaak-secondary" type="button" disabled={busy}
+        onClick={() => { void execute(submission); }}>Vorige aanvraag opnieuw versturen</button>
+    </div>}
     {notice && <div className="spaak-alert" role="alert">
       <p>{notice.message}</p>
       {notice.retry && <button className="spaak-button spaak-secondary" type="button" disabled={busy}

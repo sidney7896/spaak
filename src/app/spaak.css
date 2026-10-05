@@ -132,6 +132,8 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 .spaak-panel .spaak-button, .spaak-alert .spaak-button { margin-top: 12px; }
 .spaak-alert { border: 3px solid var(--spaak-bad); border-radius: 18px; background: var(--spaak-bad-soft); padding: 16px 18px; margin: 16px 0; }
 .spaak-alert p:last-child { margin-bottom: 0; }
+.spaak-pending { border: 3px solid var(--spaak-honey); border-radius: 18px; background: var(--spaak-honey-soft); padding: 16px 18px; margin: 16px 0; }
+.spaak-pending .spaak-button { margin-top: 12px; }
 .spaak-loading { color: var(--spaak-muted); }
 .spaak-recap { background: var(--spaak-honey-soft); border: 3px solid var(--spaak-honey); border-radius: 18px; padding: 6px 16px; margin-bottom: 20px; }
 .spaak-summary { margin: 0; padding: 0; }
