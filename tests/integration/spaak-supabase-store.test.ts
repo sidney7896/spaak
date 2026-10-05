@@ -13,6 +13,9 @@ import type { BookingInput } from "../../src/lib/spaak/store";
  * not what a live Supabase project does) and a small client turns `rpc(name, {p})` into `select fn($1::jsonb)`.
  * The store must behave like the MemoryStore of W1a. The clock is Thursday 8 October 2026, 10:15 in Amsterdam.
  * Written by the meester; the builder may not change this file.
+ *
+ * Repair 1 (05-10, Sol review of 897e880): repair types were checked against a per-instance cache, so a type added
+ * through one server was refused by another (medium). The database decides whether a repair type exists.
  */
 
 const projectRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
@@ -188,5 +191,21 @@ describe("the store behaves like the MemoryStore", () => {
                                        schema: "public", now: () => NOW });
     await expect(broken.book(input(), "key-p000001")).rejects.toThrow();
     await expect(broken.findByCode("ABCDEF")).rejects.toThrow();
+  });
+});
+
+describe("repair 1", () => {
+  it("books a repair type added through another server instance", async () => {
+    const other = new SupabaseStore({ client: client(db), schema: "public", now: () => NOW });
+    const added = await other.addRepairType({ naam: "Banden wisselen", duurMinuten: 30, prijsCent: 2500 });
+    const fresh = new SupabaseStore({ client: client(db), schema: "public", now: () => NOW });
+    const result = await fresh.book(input({ repairTypeId: added.id }), "key-r000001");
+    expect(result.ok).toBe(true);
+    expect((await store.book(input({ repairTypeId: added.id, start: "11:00" }), "key-r000002")).ok).toBe(true);
+  });
+
+  it("refuses an unknown repair type as invalid input without storing anything", async () => {
+    expect(await store.book(input({ repairTypeId: "vliegen" }), "key-r000003")).toMatchObject({ ok: false, reason: "ongeldig" });
+    expect((await store.dayOverview("2026-10-09")).flatMap((g) => g.bookings)).toHaveLength(0);
   });
 });
