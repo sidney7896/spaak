@@ -1,7 +1,3 @@
-import "@fontsource/fraunces/600.css";
-import "@fontsource/fraunces/700.css";
-import "@fontsource/atkinson-hyperlegible/400.css";
-import "@fontsource/atkinson-hyperlegible/700.css";
 import { BookingFlow } from "../components/spaak/booking-flow";
 import { Wheel } from "../components/spaak/wheel";
 import "./spaak.css";

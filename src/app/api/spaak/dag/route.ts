@@ -30,8 +30,9 @@ export async function GET(request: NextRequest) {
       tijdvakken: day.slots.map((slot) => ({
         start: slot.start,
         eind: slot.end,
-        vrij: slot.free,
+        vrij: slot.past ? 0 : slot.free,
         capaciteit: slot.capacity,
+        voorbij: slot.past,
       })),
     });
   } catch {

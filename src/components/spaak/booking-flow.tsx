@@ -8,7 +8,7 @@ import type { Booking, BookingInput, RepairType } from "../../lib/spaak/store";
 import { Wheel } from "./wheel";
 
 type Step = 1 | 2 | 3 | 4;
-type TimeSlot = { start: string; eind: string; vrij: number; capaciteit: number };
+type TimeSlot = { start: string; eind: string; vrij: number; capaciteit: number; voorbij?: boolean };
 type Day = { datum: string; reden: "gesloten" | "vol" | null; volgende: string | null; tijdvakken: TimeSlot[] };
 type Summary = Pick<Booking, "date" | "start" | "end" | "repairTypeId">;
 type Confirmation = { code: string; afspraak: Summary };
@@ -139,7 +139,8 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       } else if (task.kind === "booking" && status === 409) {
         const message = body.reden === "vol" ? "Dit tijdvak is net vol geraakt. Kies een ander tijdvak."
           : body.reden === "gesloten" ? "Op deze dag is de werkplaats gesloten. Kies een andere dag."
-            : "Dit tijdvak is al voorbij. Kies een ander tijdvak.";
+            : body.reden === "sleutel" ? "Deze aanvraag hoort bij andere gegevens. Probeer het opnieuw."
+              : "Dit tijdvak is al voorbij. Kies een ander tijdvak.";
         setNotice({ message });
         submission.current = null;
       } else if (status < 200 || status >= 300) {
@@ -151,7 +152,9 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
         if (!Array.isArray(body.tijdvakken) || body.datum !== task.date) throw new Error("De agenda kon niet worden geladen.");
         setDay(body as Day);
       } else {
+        if (status !== 200 && status !== 201) throw new Error("Je afspraak is nog niet bevestigd. Probeer het opnieuw.");
         if (typeof body.code !== "string" || !record(body.afspraak)) throw new Error("De bevestiging kon niet worden gelezen.");
+        submission.current = null;
         setConfirmation(body as Confirmation);
         setStep(4);
       }
@@ -185,12 +188,16 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
     setDay(null);
     setSlot(null);
     setStep(2);
-    submission.current = null;
+    // Navigation does not resolve a submission whose response may have been lost.
     void execute({ kind: "day", date: nextDate });
   }
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
+    submitBooking();
+  }
+
+  function submitBooking(): void {
     if (active.current || !repair || !slot) return;
     const fieldErrors = validateContact(contact);
     setErrors(fieldErrors);
@@ -198,7 +205,10 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       setNotice(null);
       return;
     }
-    const input: BookingInput = { ...contact, repairTypeId: repair.id, date, start: slot.start };
+    const input: BookingInput = {
+      naam: contact.naam.trim(), telefoon: contact.telefoon.trim(), email: contact.email.trim(), fiets: contact.fiets.trim(),
+      repairTypeId: repair.id, date, start: slot.start,
+    };
     if (!submission.current || JSON.stringify(submission.current.input) !== JSON.stringify(input)) {
       submission.current = { kind: "booking", input, key: crypto.randomUUID() };
     }
@@ -222,7 +232,10 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
     {notice && <div className="spaak-alert" role="alert">
       <p>{notice.message}</p>
       {notice.retry && <button className="spaak-button spaak-secondary" type="button" disabled={busy}
-        onClick={() => { if (notice.retry) void execute(notice.retry); }}>Opnieuw proberen</button>}
+        onClick={() => {
+          if (notice.retry?.kind === "booking") submitBooking();
+          else if (notice.retry) void execute(notice.retry);
+        }}>Opnieuw proberen</button>}
     </div>}
     {busy && <p className="spaak-loading" role="status">{step === 3 ? "Je afspraak wordt verwerkt…" : "Even ophalen…"}</p>}
     {step === 1 && <>
@@ -243,16 +256,20 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
           onClick={() => openDay(moveDay(date, 1))}>Volgende dag</button>
       </div>
       <p className="spaak-day-label"><time dateTime={date}>{dayLabel(date)}</time></p>
-      {day?.reden ? <div className="spaak-panel">
-        <p>{day.reden === "gesloten" ? "Op deze dag is de werkplaats gesloten." : "Deze dag is helemaal vol."}</p>
+      {day?.reden && <div className="spaak-panel">
+        <p>{day.reden === "gesloten" ? "Op deze dag is de werkplaats gesloten."
+          : day.tijdvakken.length > 0 && day.tijdvakken.every((time) => time.voorbij)
+            ? "Alle tijdvakken op deze dag zijn voorbij." : "Deze dag is helemaal vol."}</p>
         {day.volgende && <button className="spaak-button" type="button" disabled={busy}
           onClick={() => { if (day.volgende) openDay(day.volgende); }}>{dayLabel(day.volgende)}</button>}
-      </div> : <div className="spaak-choices">{day?.tijdvakken.map((time) => <button type="button" key={time.start}
-        className="spaak-choice spaak-slot" disabled={time.vrij <= 0 || busy}
-        aria-label={`${time.start} – ${time.eind}${time.vrij <= 0 ? " Vol" : ""}`}
+      </div>}
+      <div className="spaak-choices">{day?.tijdvakken.map((time) => <button type="button" key={time.start}
+        className="spaak-choice spaak-slot" disabled={time.voorbij === true || time.vrij <= 0 || busy}
+        aria-label={`${time.start} – ${time.eind}${time.voorbij ? " Voorbij" : time.vrij <= 0 ? " Vol" : ""}`}
         onClick={() => { setSlot(time); setErrors({}); setNotice(null); setStep(3); }}>
-        <span>{time.start} – {time.eind}</span>{time.vrij <= 0 && <span className="spaak-slot-note">Vol</span>}
-      </button>)}</div>}
+        <span>{time.start} – {time.eind}</span>{(time.voorbij || time.vrij <= 0) &&
+          <span className="spaak-slot-note">{time.voorbij ? "Voorbij" : "Vol"}</span>}
+      </button>)}</div>
       <button className="spaak-back" type="button" disabled={busy} onClick={() => { setNotice(null); setStep(1); }}>Andere reparatie kiezen</button>
     </>}
     {step === 3 && repair && slot && <>

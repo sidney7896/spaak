@@ -4,7 +4,7 @@ export type RepairType = { id: string; naam: string; duurMinuten: number; prijsC
 export type BookingInput = Contact & { repairTypeId: string; date: string; start: string };
 export type Booking = BookingInput & { code: string; end: string; status: Status; createdAt: string };
 
-export type AvailableSlot = Slot & { booked: number; free: number };
+export type AvailableSlot = Slot & { booked: number; free: number; past: boolean };
 export type DayAvailability = {
   date: string;
   closed: boolean;

@@ -60,10 +60,11 @@ export class MemoryStore implements SpaakStore {
   private availability(date: string, now: Date): DayAvailability {
     const slots = this.slots(date).map((slot) => {
       const booked = this.activeBookings(date, slot.start).length;
-      return { ...slot, booked, free: Math.max(0, slot.capacity - booked) };
+      const past = slotStart(date, slot.start).getTime() <= now.getTime();
+      return { ...slot, booked, past, free: past ? 0 : Math.max(0, slot.capacity - booked) };
     });
     const closed = slots.length === 0;
-    const futureSlots = slots.filter((slot) => slotStart(date, slot.start).getTime() > now.getTime());
+    const futureSlots = slots.filter((slot) => !slot.past);
     const reason: DayAvailability["reason"] = closed ? "gesloten" : futureSlots.length === 0 ? "verleden" :
       futureSlots.some((slot) => slot.free > 0) ? null : "vol";
     return { date, closed, slots, reason };

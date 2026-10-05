@@ -63,7 +63,13 @@ export async function POST(request: NextRequest) {
   };
   try {
     const result = await getStore().book(input, key);
-    if (result.ok) return spaakJson({ code: result.booking.code, afspraak: result.booking }, 201);
+    if (result.ok) {
+      // The store returns the original booking for a reused key. Only its submitter may see it.
+      const matches = INPUT_FIELDS.every((field) => result.booking[field] ===
+        (field === "repairTypeId" || field === "date" || field === "start" ? input[field] : input[field].trim()));
+      if (!matches) return spaakJson({ reden: "sleutel" }, 409);
+      return spaakJson({ code: result.booking.code, afspraak: result.booking }, 201);
+    }
     if (result.reason === "ongeldig") {
       return spaakJson({ reden: result.reason, velden: result.fields ?? {} }, 422);
     }

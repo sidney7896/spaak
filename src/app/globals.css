@@ -1,12 +1,14 @@
-/* Design B "Helder modern" (Sid's choice, 25-09-2026): cool white, cobalt accent, Manrope over Source Sans 3. */
+/* Local direction A fonts: Fraunces headings and Atkinson Hyperlegible body. */
+.font-display { --font-display: "Fraunces", Georgia, serif; }
+.font-body { --font-body: "Atkinson Hyperlegible", system-ui, sans-serif; }
 :root {
   color-scheme: light;
   --bg: #f3f5fb; --card: #ffffff; --ink: #131a33; --muted: #56607a; --line: #dde2ef;
   --brand: #3446d4; --brand-hover: #2836b0; --brand-ink: #27338f; --brand-soft: #e8ebfc;
   --error: #b42318; --error-soft: #fdecea; --ok-soft: #e7f6ee; --ok-ink: #11643a;
   --radius: 16px; --radius-control: 12px;
-  --display: var(--font-display), "Manrope", system-ui, sans-serif;
-  --body: var(--font-body), "Source Sans 3", system-ui, sans-serif;
+  --display: var(--font-display), Georgia, serif;
+  --body: var(--font-body), system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
 body { margin: 0; color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; background: var(--bg); -webkit-font-smoothing: antialiased; }
