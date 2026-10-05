@@ -14,7 +14,7 @@ type Task = ReadTask
   | { kind: "closed"; date: string; closed: boolean };
 type RequestTask = Exclude<Task, ReadTask> | { kind: "types" } | { kind: "day"; date: string };
 type Reply = { status: number; body: unknown };
-type Notice = { message: string; retry?: ReadTask; refreshRequired?: boolean };
+type Notice = { message: string; retry?: ReadTask };
 
 const dayFormatter = new Intl.DateTimeFormat("nl-NL", {
   weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
@@ -107,6 +107,7 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [capacities, setCapacities] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(true);
+  const [unreconciledChange, setUnreconciledChange] = useState(false);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [access, setAccess] = useState<401 | 403 | null>(null);
@@ -120,13 +121,14 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
     active.current = controller;
     const requestGeneration = ++generation.current;
     const isRead = task.kind === "load" || task.kind === "day";
+    let changeAnswered = false;
     setBusy(true);
     setNotice(null);
     setResult(null);
     setAccess(null);
     if (isRead) {
       setDate(task.date);
-      setDay(null);
+      setDay((current) => current?.datum === task.date ? current : null);
     }
     if (task.kind === "add") setErrors({});
     const applyDay = (value: Day): void => {
@@ -152,6 +154,8 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
         return;
       }
       const { status, body } = reply;
+      const reason = record(body) && typeof body.fout === "string" && body.fout.trim() ? body.fout
+        : record(body) && typeof body.reden === "string" && body.reden.trim() ? body.reden : null;
       if (task.kind === "load" || task.kind === "day") {
         if (status !== 200 || !dayReply(body, task.date)) throw new Error("We konden het antwoord niet lezen.");
         if (task.kind === "load") {
@@ -159,6 +163,8 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
           setRepairs(types.body.reparaties);
         }
         applyDay(body);
+        // Only both validated reads can reconcile a change whose reply was lost.
+        if (task.kind === "load") setUnreconciledChange(false);
       } else if (task.kind === "add" && status === 201 && record(body) && repairReply(body.reparatie)) {
         const repair = body.reparatie;
         setRepairs((current) => [...current, repair]);
@@ -179,6 +185,8 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
         } : current);
         setResult("Capaciteit opgeslagen.");
       } else if (status === 200 && record(body) && body.ok === true && task.kind === "closed") {
+        // A failed schedule read after this definite POST reply is a read failure.
+        changeAnswered = true;
         if (task.closed) {
           setDay({ datum: task.date, gesloten: true, tijdvakken: [] });
           setResult("De dag is gesloten.");
@@ -196,18 +204,20 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
             throw new Error("We konden het antwoord niet lezen.");
           }
         }
-      } else if (status === 400 && record(body) && typeof body.fout === "string") {
-        setNotice({ message: body.fout, retry: { kind: "day", date: task.date } });
+      } else if (status >= 400 && status < 500 && reason) {
+        setNotice({ message: reason, retry: { kind: "day", date: task.date } });
       } else {
         throw new Error("We konden het antwoord niet lezen.");
       }
     } catch (error) {
       if (generation.current === requestGeneration) {
+        const unansweredChange = !isRead && !changeAnswered;
+        if (unansweredChange) setUnreconciledChange(true);
         const explanation = error instanceof TypeError ? "Er is geen verbinding."
           : error instanceof Error ? error.message : "Er ging iets mis.";
         setNotice({
-          message: isRead ? explanation : `Het antwoord is niet ontvangen. De wijziging kan al opgeslagen zijn. ${explanation}`,
-          retry: { kind: "load", date: task.date }, refreshRequired: !isRead,
+          message: unansweredChange ? `Het antwoord is niet ontvangen. De wijziging kan al opgeslagen zijn. ${explanation}` : explanation,
+          retry: { kind: "load", date: task.date },
         });
       }
     } finally {
@@ -228,7 +238,7 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
     };
   }, [execute]);
 
-  const locked = busy || access !== null || notice?.refreshRequired === true;
+  const locked = busy || access !== null || unreconciledChange;
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -296,9 +306,9 @@ export function OwnerSettings({ initialDate }: { initialDate?: string }) {
         <h2 id={`${prefix}-capacity`}>Capaciteit</h2>
         <div className="spaak-day-nav">
           <button className="spaak-button spaak-secondary" type="button" disabled={busy || access !== null}
-            onClick={() => void execute({ kind: "day", date: shiftDate(date, -1) })}>Vorige dag</button>
+            onClick={() => void execute({ kind: unreconciledChange ? "load" : "day", date: shiftDate(date, -1) })}>Vorige dag</button>
           <button className="spaak-button spaak-secondary" type="button" disabled={busy || access !== null}
-            onClick={() => void execute({ kind: "day", date: shiftDate(date, 1) })}>Volgende dag</button>
+            onClick={() => void execute({ kind: unreconciledChange ? "load" : "day", date: shiftDate(date, 1) })}>Volgende dag</button>
         </div>
         <p className="spaak-day-label"><time dateTime={date}>{dayFormatter.format(new Date(`${date}T00:00:00Z`))}</time></p>
         {day && <>
