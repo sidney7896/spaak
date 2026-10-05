@@ -13,8 +13,11 @@ import { BookingFlow } from "../../src/components/spaak/booking-flow";
  * book twice (medium); elapsed slots of today were selectable (medium); the root layout loaded Google fonts, so an
  * offline build failed (medium).
  *
- * Repair 2 (05-10, Sol review of cd9cfc4, the last automatic repair): when the lost booking had taken the last place,
- * going back made it unreachable (medium). An unresolved submission now stays recoverable from every step.
+ * Repair 2 (05-10, Sol review of cd9cfc4): when the lost booking had taken the last place, going back made it
+ * unreachable (medium). Repair 3 (meester decision after Sol's review of 4c83edf found Bevestigen sending the previous
+ * request, high): the flexible design produced a new edge case every cycle, so the scope is narrowed: while a
+ * submission is unanswered, slot and details are locked and the only action is 'Opnieuw proberen' with the same key
+ * and input.
  */
 
 type Reply = { status: number; body: unknown } | "network-error" | "hang";
@@ -191,20 +194,24 @@ describe("journey J1: booking on the phone", () => {
 });
 
 describe("repair 1", () => {
-  it("keeps the key of an unanswered submission when the customer goes back and picks the same slot", async () => {
+  it("locks slot and details while a submission is unanswered, and retries with the same key and input", async () => {
     replies.afspraken = ["network-error", { status: 201, body: BOOKED }];
     await toDetails();
     fill();
     fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
-    await screen.findByRole("alert");
-    fireEvent.click(screen.getByRole("button", { name: "Ander tijdvak kiezen" }));
-    fireEvent.click(await screen.findByRole("button", { name: /10:00\s*[–-]\s*11:00/ }));
-    await screen.findByRole("heading", { name: "Wie ben je?" });
-    fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert.textContent).toMatch(/We weten nog niet of je afspraak is gelukt/);
+    expect((screen.getByRole("button", { name: "Ander tijdvak kiezen" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Bevestigen" }) as HTMLButtonElement).disabled).toBe(true);
+    for (const label of ["Naam", "Telefoon", "E-mail", "Wat is er met je fiets?"]) {
+      expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true);
+    }
+    fireEvent.click(within(alert).getByRole("button", { name: "Opnieuw proberen" }));
     await screen.findByRole("heading", { name: "Je afspraak staat" });
-    const keys = bookingPosts().map((c) => new Headers(c.init?.headers).get("idempotency-key"));
-    expect(keys).toHaveLength(2);
-    expect(keys[0]).toBe(keys[1]);
+    const posts = bookingPosts();
+    expect(posts).toHaveLength(2);
+    expect(new Headers(posts[0].init?.headers).get("idempotency-key")).toBe(new Headers(posts[1].init?.headers).get("idempotency-key"));
+    expect(JSON.parse(String(posts[1].init?.body))).toEqual(JSON.parse(String(posts[0].init?.body)));
   });
 
   it("shows elapsed slots of today as past and not selectable", async () => {
@@ -231,32 +238,31 @@ describe("repair 1", () => {
   });
 });
 
-describe("repair 2", () => {
-  it("keeps an unanswered booking recoverable when its slot has filled up meanwhile", async () => {
-    replies.afspraken = ["network-error", { status: 201, body: BOOKED }];
-    replies["dag:2026-10-09"] = [{ status: 200, body: DAY }, { status: 200, body: { ...DAY, tijdvakken: [
-      { start: "09:00", eind: "10:00", vrij: 0, capaciteit: 2 },
-      { start: "10:00", eind: "11:00", vrij: 0, capaciteit: 2 }] } }];
+describe("repair 3 (meester decision after two repair cycles)", () => {
+  it("unlocks only after a definitive answer, and a new submission then gets a new key", async () => {
+    replies.afspraken = ["network-error", { status: 409, body: { reden: "vol" } }, { status: 201, body: BOOKED }];
     await toDetails();
     fill();
     fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
-    await screen.findByRole("alert");
+    fireEvent.click(within(await screen.findByRole("alert")).getByRole("button", { name: "Opnieuw proberen" }));
+    await screen.findByText(/Dit tijdvak is net vol geraakt/);
+    expect((screen.getByRole("button", { name: "Ander tijdvak kiezen" }) as HTMLButtonElement).disabled).toBe(false);
+    expect((screen.getByLabelText("Naam") as HTMLInputElement).disabled).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Ander tijdvak kiezen" }));
-    const full = await screen.findByRole("button", { name: /10:00\s*[–-]\s*11:00.*Vol/ });
-    expect((full as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(screen.getByRole("button", { name: "Vorige aanvraag opnieuw versturen" }));
+    fireEvent.click(await screen.findByRole("button", { name: /10:00\s*[–-]\s*11:00/ }));
+    await screen.findByRole("heading", { name: "Wie ben je?" });
+    fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
     await screen.findByRole("heading", { name: "Je afspraak staat" });
-    expect(screen.getByLabelText("Afspraakcode").textContent).toBe("R7TQ2D");
-    const posts = bookingPosts();
-    expect(posts).toHaveLength(2);
-    const keys = posts.map((c) => new Headers(c.init?.headers).get("idempotency-key"));
+    const keys = bookingPosts().map((c) => new Headers(c.init?.headers).get("idempotency-key"));
+    expect(keys).toHaveLength(3);
     expect(keys[0]).toBe(keys[1]);
-    expect(JSON.parse(String(posts[1].init?.body))).toEqual(JSON.parse(String(posts[0].init?.body)));
+    expect(keys[2]).not.toBe(keys[1]);
   });
 
-  it("offers no recovery button when nothing is pending", async () => {
+  it("shows no retry notice when nothing is pending", async () => {
     render(<BookingFlow initialDate="2026-10-09" />);
     await screen.findByRole("button", { name: /Onderhoudsbeurt/ });
-    expect(screen.queryByRole("button", { name: "Vorige aanvraag opnieuw versturen" })).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText(/We weten nog niet/)).toBeNull();
   });
 });
