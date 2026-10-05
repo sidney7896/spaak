@@ -1,0 +1,154 @@
+:root {
+  --spaak-bg: #FBF3E4;
+  --spaak-paper: #FFFDF8;
+  --spaak-ink: #2B1B10;
+  --spaak-muted: #65503E;
+  --spaak-brand: #A63A1B;
+  --spaak-brand-dark: #80290F;
+  --spaak-honey: #F4C95D;
+  --spaak-honey-soft: #FBEBC1;
+  --spaak-line: #D9C8AC;
+  --spaak-edge: #8A7254;
+  --spaak-ok: #2B6A3C;
+  --spaak-ok-soft: #E2F0E0;
+  --spaak-bad: #A31F1A;
+  --spaak-bad-soft: #FCE8E4;
+  --spaak-focus: #0B4F9C;
+  --spaak-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --spaak-sans: "Atkinson Hyperlegible", system-ui, Arial, sans-serif;
+}
+
+body:has(.spaak-home) {
+  background: var(--spaak-bg);
+  color: var(--spaak-ink);
+  font: 400 18px/1.5 var(--spaak-sans);
+  --bg: var(--spaak-bg);
+  --card: var(--spaak-paper);
+  --ink: var(--spaak-ink);
+  --muted: var(--spaak-muted);
+  --line: var(--spaak-line);
+  --brand: var(--spaak-brand);
+  --brand-hover: var(--spaak-brand-dark);
+  --brand-ink: var(--spaak-brand-dark);
+  --brand-soft: var(--spaak-honey-soft);
+  --display: var(--spaak-serif);
+  --body: var(--spaak-sans);
+}
+
+/* Keep the existing account navigation usable alongside the public shop page. */
+body:has(.spaak-home) .nav { gap: 12px; padding: 12px 16px; flex-wrap: wrap; }
+body:has(.spaak-home) .nav .brand { min-width: 0; flex: 1 1 180px; overflow-wrap: anywhere; }
+body:has(.spaak-home) .brand-mark { flex: none; }
+body:has(.spaak-home) .nav-links { flex-wrap: wrap; gap: 12px; }
+body:has(.spaak-home) .nav-links :is(a, button) { min-height: 44px; display: inline-flex; align-items: center; }
+body:has(.spaak-home) .banner { font-size: 16px; }
+body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--spaak-focus); outline-offset: 3px; }
+
+.spaak-home {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+.spaak-shop-header { display: flex; align-items: center; gap: 12px; padding: 20px 16px 0; }
+.spaak-wheel { color: var(--spaak-brand); flex: none; }
+.spaak-shop-name { margin: 0; font: 700 28px/1 var(--spaak-serif); }
+.spaak-shop-subtitle { margin: 3px 0 0; font-size: 16px; color: var(--spaak-muted); }
+.spaak-flow { padding: 20px 16px 8px; min-width: 0; font: 400 18px/1.5 var(--spaak-sans); color: var(--spaak-ink); overflow-wrap: anywhere; }
+.spaak-flow *, .spaak-flow *::before, .spaak-flow *::after { box-sizing: border-box; min-width: 0; }
+.spaak-flow h1 { font: 700 30px/1.15 var(--spaak-serif); margin: 6px 0 10px; letter-spacing: normal; }
+.spaak-flow p { margin: 0 0 10px; }
+.spaak-progress { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.spaak-progress p { margin: 0; }
+.spaak-kicker { font: 700 16px/1.2 var(--spaak-sans); color: var(--spaak-brand-dark); letter-spacing: .03em; text-transform: uppercase; }
+.spaak-progress .spaak-step-label { margin-top: 2px; font: 600 20px/1.2 var(--spaak-serif); }
+.spaak-flow .spaak-lead { font-size: 18px; color: var(--spaak-muted); margin-bottom: 18px; }
+.spaak-flow :is(button, input, textarea) { font-family: var(--spaak-sans); }
+.spaak-flow :is(button, input, textarea):focus-visible { outline: 4px solid var(--spaak-focus); outline-offset: 3px; box-shadow: none; }
+.spaak-flow h1:focus-visible { outline: 4px solid var(--spaak-focus); outline-offset: 3px; }
+
+.spaak-flow .spaak-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 60px;
+  padding: 12px 20px;
+  border: 3px solid var(--spaak-brand);
+  border-radius: 16px;
+  background: var(--spaak-brand);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.spaak-flow .spaak-button:hover { background: var(--spaak-brand-dark); border-color: var(--spaak-brand-dark); }
+.spaak-flow .spaak-secondary { background: transparent; color: var(--spaak-brand-dark); }
+.spaak-flow .spaak-secondary:hover { background: var(--spaak-honey-soft); color: var(--spaak-ink); }
+.spaak-flow button:disabled { opacity: .7; cursor: wait; }
+.spaak-choices { display: grid; gap: 12px; margin: 0 0 8px; }
+.spaak-flow .spaak-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 12px;
+  min-height: 72px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 3px solid var(--spaak-edge);
+  border-radius: 18px;
+  background: var(--spaak-paper);
+  color: var(--spaak-ink);
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.spaak-flow .spaak-choice:hover { background: var(--spaak-honey-soft); }
+.spaak-choice-name { grid-column: 1; font: 700 22px/1.2 var(--spaak-serif); }
+.spaak-choice-meta { grid-column: 1; font: 700 17px/1.3 var(--spaak-sans); color: var(--spaak-muted); }
+.spaak-choice-arrow { grid-column: 2; grid-row: 1 / span 2; font-size: 26px; align-self: center; color: var(--spaak-brand); }
+.spaak-flow .spaak-slot { min-height: 64px; align-items: center; font: 700 22px/1.2 var(--spaak-serif); }
+.spaak-slot-note { font: 700 18px/1.2 var(--spaak-sans); }
+.spaak-flow .spaak-slot:disabled {
+  opacity: 1;
+  background: repeating-linear-gradient(135deg, #EBE0CC 0 10px, #E3D7C1 10px 20px);
+  border-style: dashed;
+  color: #5B4838;
+  cursor: not-allowed;
+}
+.spaak-slot:disabled > span:first-child { text-decoration: line-through; text-decoration-thickness: 2px; }
+.spaak-day-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.spaak-day-nav .spaak-button { font-size: 18px; padding: 10px 8px; }
+.spaak-flow .spaak-day-label { margin: 0 0 16px; font: 700 22px/1.2 var(--spaak-serif); }
+.spaak-panel { border: 3px solid var(--spaak-edge); border-radius: 18px; background: var(--spaak-paper); padding: 16px 18px; margin: 0 0 18px; }
+.spaak-panel .spaak-button, .spaak-alert .spaak-button { margin-top: 12px; }
+.spaak-alert { border: 3px solid var(--spaak-bad); border-radius: 18px; background: var(--spaak-bad-soft); padding: 16px 18px; margin: 16px 0; }
+.spaak-alert p:last-child { margin-bottom: 0; }
+.spaak-loading { color: var(--spaak-muted); }
+.spaak-recap { background: var(--spaak-honey-soft); border: 3px solid var(--spaak-honey); border-radius: 18px; padding: 6px 16px; margin-bottom: 20px; }
+.spaak-summary { margin: 0; padding: 0; }
+.spaak-summary > div { padding: 12px 0; border-bottom: 2px dotted var(--spaak-line); }
+.spaak-summary > div:last-child { border: 0; }
+.spaak-summary dt { font: 700 16px/1.3 var(--spaak-sans); color: var(--spaak-muted); }
+.spaak-summary dd { margin: 2px 0 0; font-size: 19px; overflow-wrap: anywhere; }
+.spaak-field { margin: 0 0 22px; }
+.spaak-field label { display: block; font: 700 19px/1.3 var(--spaak-sans); margin-bottom: 8px; }
+.spaak-field :is(input, textarea) { display: block; width: 100%; min-height: 58px; padding: 12px 14px; border: 3px solid var(--spaak-edge); border-radius: 14px; background: #fff; color: var(--spaak-ink); font: 400 20px/1.3 var(--spaak-sans); }
+.spaak-field textarea { min-height: 150px; resize: vertical; }
+.spaak-field [aria-invalid="true"] { border-color: var(--spaak-bad); background: var(--spaak-bad-soft); }
+.spaak-flow .spaak-field-error { margin: 8px 0 0; color: var(--spaak-bad); font: 700 17px/1.4 var(--spaak-sans); }
+.spaak-flow .spaak-back { display: inline-flex; min-height: 48px; padding: 10px 0; margin-top: 12px; border: 0; background: transparent; color: var(--spaak-brand-dark); font: 700 18px/1.3 var(--spaak-sans); text-decoration: underline; text-underline-offset: 4px; white-space: normal; text-align: left; }
+.spaak-flow .spaak-back:hover { background: transparent; color: var(--spaak-brand); }
+.spaak-flow .spaak-code { display: flex; gap: 6px; margin: 12px 0 20px; }
+.spaak-code span { flex: 1 1 0; min-width: 0; min-height: 64px; aspect-ratio: 3 / 4; display: grid; place-items: center; background: #fff; border: 3px solid var(--spaak-brand); border-radius: 12px; font: 700 clamp(24px, 8vw, 34px)/1 var(--spaak-serif); color: var(--spaak-brand-dark); }
+.spaak-confirmation { border-color: var(--spaak-ok); background: var(--spaak-ok-soft); }
+.spaak-footer { margin: 12px 16px 0; padding: 18px 0 24px; border-top: 3px dotted var(--spaak-line); font-size: 16px; color: var(--spaak-muted); }
+.spaak-footer p { margin: 0 0 6px; }
