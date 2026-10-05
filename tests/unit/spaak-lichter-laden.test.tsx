@@ -68,6 +68,9 @@ describe("analytics loads only when it can run", () => {
     vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://eu.i.posthog.com");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "anon-key-for-tests");
+    // Spaak runs on the shared database topology: its browser config requires the app's own schema.
+    vi.stubEnv("NEXT_PUBLIC_APP_ENV", "development");
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_DB_SCHEMA", "app_spaak_dev");
     document.cookie = "analytics_consent=granted";
     await mount();
     await vi.waitFor(() => expect(state.init).toHaveBeenCalledTimes(1));
