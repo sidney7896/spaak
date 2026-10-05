@@ -24,7 +24,7 @@ export default defineConfig({
   use: { baseURL: process.env.BASE_URL, screenshot: "only-on-failure", trace: "off" },
   projects: [
     { name: "inloggen", testMatch: /inloggen\.setup\.ts$/, use: telefoon },
-    { name: "telefoon", testMatch: /\.pw\.ts$/, testIgnore: /(afmelden|spaak-personeel|spaak-breedtes)\.pw\.ts$/, dependencies: ["inloggen"], use: { ...telefoon, storageState: STATE } },
+    { name: "telefoon", testMatch: /\.pw\.ts$/, testIgnore: /(afmelden|spaak-personeel|spaak-breedtes|spaak-kwaliteit)\.pw\.ts$/, dependencies: ["inloggen"], use: { ...telefoon, storageState: STATE } },
     { name: "computer", testMatch: /\.pw\.ts$/, testIgnore: /(afmelden|spaak-klant)\.pw\.ts$/, dependencies: ["inloggen"], use: { ...computer, storageState: STATE } },
     { name: "afmelden", testMatch: /afmelden\.pw\.ts$/, dependencies: ["telefoon", "computer"], use: computer },
   ],
