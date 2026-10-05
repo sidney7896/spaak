@@ -86,9 +86,6 @@ function outcome<T extends string>(value: unknown, reasons: readonly T[]): { ok:
 export class SupabaseStore implements SpaakStore {
   private readonly rpc: ReturnType<RpcClient["schema"]>;
   private readonly now: () => Date;
-  // The seeded types are always available. Listing or adding types refreshes this
-  // catalogue before a customer can submit a newly offered repair type.
-  private readonly repairIds = new Set(["onderhoud", "remmen", "band", "overig"]);
 
   constructor(options: { client: RpcClient; schema: string; now?: () => Date }) {
     if (!/^[a-z][a-z0-9_]*$/.test(options.schema)) throw new Error("Ongeldig Spaak databaseschema.");
@@ -105,8 +102,6 @@ export class SupabaseStore implements SpaakStore {
   async listRepairTypes(): Promise<RepairType[]> {
     const types = array(await this.call("spaak_reparaties", {})).map(repair);
     if (new Set(types.map((type) => type.id)).size !== types.length) return malformed();
-    this.repairIds.clear();
-    for (const type of types) this.repairIds.add(type.id);
     return types;
   }
 
@@ -115,9 +110,7 @@ export class SupabaseStore implements SpaakStore {
         (input.prijsCent !== null && (!Number.isSafeInteger(input.prijsCent) || input.prijsCent < 0))) {
       throw new Error("Ongeldig reparatietype.");
     }
-    const type = repair(await this.call("spaak_reparatie_toevoegen", { ...input, naam: input.naam.trim() }));
-    this.repairIds.add(type.id);
-    return type;
+    return repair(await this.call("spaak_reparatie_toevoegen", { ...input, naam: input.naam.trim() }));
   }
 
   private readDay(value: unknown, defaults: Slot[]): { closed: boolean; slots: (Slot & { booked: number; free: number })[] } {
@@ -171,7 +164,6 @@ export class SupabaseStore implements SpaakStore {
 
   async book(input: BookingInput, idempotencyKey: string): Promise<BookingResult> {
     const fields: Partial<Record<keyof BookingInput, string>> = validateContact(input);
-    if (!this.repairIds.has(input.repairTypeId)) fields.repairTypeId = "Kies een geldig reparatietype.";
     let slots: Slot[];
     try { slots = slotsForDate(input.date, []); } catch {
       fields.date = "Kies een geldige datum.";
@@ -188,8 +180,11 @@ export class SupabaseStore implements SpaakStore {
       start_tijdstip: slotStart(input.date, slot.start).toISOString(), nu: this.now().toISOString(),
     }));
     if (result.ok === true) return { ok: true, booking: booking(result.booking) };
-    const failure = outcome(result, ["gesloten", "verleden", "vol"] as const);
+    const failure = outcome(result, ["ongeldig", "gesloten", "verleden", "vol"] as const);
     if (failure.ok) return malformed();
+    if (failure.reason === "ongeldig") {
+      return { ...failure, fields: { repairTypeId: text(object(result.fields).repairTypeId) } };
+    }
     return failure;
   }
 

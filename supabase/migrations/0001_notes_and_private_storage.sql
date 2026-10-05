@@ -253,6 +253,10 @@ declare
   v_poging integer;
   v_index integer;
 begin
+  if not exists (select 1 from {{APP_SCHEMA}}.spaak_reparaties r where r.id = p->>'repairTypeId') then
+    return jsonb_build_object('ok', false, 'reason', 'ongeldig',
+      'fields', jsonb_build_object('repairTypeId', 'Kies een geldig reparatietype.'));
+  end if;
   -- Key first, then day, then slot: retries on different slots also serialize.
   perform pg_advisory_xact_lock(hashtextextended('{{APP_SCHEMA}}:sleutel:' || (p->>'sleutel'), 0));
   select * into v_afspraak from {{APP_SCHEMA}}.spaak_afspraken a where a.sleutel = p->>'sleutel';

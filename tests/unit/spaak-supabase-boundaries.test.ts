@@ -21,7 +21,7 @@ describe("Spaak RPC boundaries", () => {
     const { store, rpc } = fixture(null);
     for (const change of [
       { email: "invalid" }, { telefoon: "abc" }, { naam: " " }, { fiets: "x".repeat(501) },
-      { date: "2026-02-30" }, { start: "10:30" }, { repairTypeId: "unknown" },
+      { date: "2026-02-30" }, { start: "10:30" }, { email: "invalid", repairTypeId: "unknown" },
     ]) {
       expect(await store.book({ ...INPUT, ...change }, "valid-key-01")).toMatchObject({ ok: false, reason: "ongeldig" });
     }
@@ -31,6 +31,14 @@ describe("Spaak RPC boundaries", () => {
     await expect(store.setClosedDay("2026-02-30", true)).rejects.toThrow();
     await expect(store.addRepairType({ naam: " ", duurMinuten: 30, prijsCent: 10 })).rejects.toThrow();
     expect(rpc).not.toHaveBeenCalled();
+  });
+
+  it("lets the database reject an unknown repair type", async () => {
+    const failure = { ok: false, reason: "ongeldig", fields: { repairTypeId: "Kies een geldig reparatietype." } };
+    const { store, rpc } = fixture(failure);
+    expect(await store.book({ ...INPUT, repairTypeId: "unknown" }, "valid-key-01")).toEqual(failure);
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith("spaak_boek", { p: expect.objectContaining({ repairTypeId: "unknown" }) });
   });
 
   it("rejects null, incomplete or inconsistent RPC results across every method", async () => {
