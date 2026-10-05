@@ -5,10 +5,16 @@ test.describe("zonder inloggen", () => {
   test.use({ storageState: ANONIEM });
 
   test("de kopbalk biedt alleen inloggen aan", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/sign-in");
     const nav = page.getByRole("navigation", { name: "Hoofdmenu" });
     await expect(nav.getByRole("link", { name: "Inloggen" })).toBeVisible();
     await expect(nav.getByRole("button", { name: "Uitloggen" })).toHaveCount(0);
+  });
+
+  test("de klantpagina toont alleen de winkelkop en een werkplaatslink", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("navigation", { name: "Hoofdmenu" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Voor de werkplaats" })).toBeVisible();
   });
 
   test("het overzicht is afgeschermd", async ({ page }) => {

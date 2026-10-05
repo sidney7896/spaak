@@ -127,6 +127,8 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 .spaak-slot:disabled > span:first-child { text-decoration: line-through; text-decoration-thickness: 2px; }
 .spaak-day-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
 .spaak-day-nav .spaak-button { font-size: 18px; padding: 10px 8px; }
+.spaak-flow .spaak-day-nav .spaak-button:is(:focus, :disabled) { background: transparent; color: var(--spaak-brand-dark); border-color: var(--spaak-brand); }
+.spaak-flow .spaak-day-nav .spaak-button:disabled { opacity: .45; cursor: not-allowed; }
 .spaak-flow .spaak-day-label { margin: 0 0 16px; font: 700 22px/1.2 var(--spaak-serif); }
 .spaak-panel { border: 3px solid var(--spaak-edge); border-radius: 18px; background: var(--spaak-paper); padding: 16px 18px; margin: 0 0 18px; }
 .spaak-panel .spaak-button, .spaak-alert .spaak-button { margin-top: 12px; }
@@ -153,6 +155,7 @@ body:has(.spaak-home) :is(a, button):focus-visible { outline: 4px solid var(--sp
 .spaak-confirmation { border-color: var(--spaak-ok); background: var(--spaak-ok-soft); }
 .spaak-footer { margin: 12px 16px 0; padding: 18px 0 24px; border-top: 3px dotted var(--spaak-line); font-size: 16px; color: var(--spaak-muted); }
 .spaak-footer p { margin: 0 0 6px; }
+.spaak-footer .spaak-staff-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; color: var(--spaak-muted); text-underline-offset: 3px; }
 
 /* Workshop tablet: the customer's D1 choice, four large controls in two rows. */
 .spaak-workshop { max-width: 960px; }

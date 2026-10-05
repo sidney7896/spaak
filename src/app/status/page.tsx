@@ -16,6 +16,7 @@ export default async function StatusPage({ searchParams }: Props) {
     <StatusLookup initialCode={initialCode} />
     <footer className="spaak-footer">
       <p>Vragen over je fiets? Bel ons: <a href="tel:0105550142">010-555 01 42</a>.</p>
+      <a className="spaak-staff-link" href="/werkplaats">Voor de werkplaats</a>
     </footer>
   </main>;
 }

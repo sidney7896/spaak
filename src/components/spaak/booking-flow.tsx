@@ -39,13 +39,17 @@ function moveDay(date: string, amount: number): string {
   return result.toISOString().slice(0, 10);
 }
 
-function nextOpenDay(): string {
-  const now = new Date();
+function today(now: Date = new Date()): string {
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/Amsterdam", year: "numeric", month: "2-digit", day: "2-digit",
   }).formatToParts(now);
   const part = (name: string): string => parts.find((entry) => entry.type === name)?.value ?? "";
-  let day = `${part("year")}-${part("month")}-${part("day")}`;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function nextOpenDay(): string {
+  const now = new Date();
+  let day = today(now);
   while (!slotsForDate(day, []).some((slot) => slotStart(day, slot.start).getTime() > now.getTime())) {
     day = moveDay(day, 1);
   }
@@ -253,7 +257,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
     {step === 2 && <>
       <p className="spaak-lead">Kies wanneer je je fiets komt brengen.</p>
       <div className="spaak-day-nav">
-        <button className="spaak-button spaak-secondary" type="button" disabled={busy}
+        <button className="spaak-button spaak-secondary" type="button" disabled={busy || moveDay(date, -1) < today()}
           onClick={() => openDay(moveDay(date, -1))}>Vorige dag</button>
         <button className="spaak-button spaak-secondary" type="button" disabled={busy}
           onClick={() => openDay(moveDay(date, 1))}>Volgende dag</button>
