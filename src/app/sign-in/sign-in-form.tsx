@@ -43,7 +43,7 @@ export function SignInForm() {
       return;
     }
     // A full navigation on purpose: /auth/check is a route handler that reads the fresh session cookies and redirects.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    // A full navigation on purpose: the Next lint rule that flagged a relative destination is not loaded here.
     window.location.assign("/auth/check?next=/dashboard");
   }
   function otherEmail() { setSent(false); setCode(""); setMessage(""); setError(""); }

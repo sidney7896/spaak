@@ -20,7 +20,7 @@
     "rollback:app": "node ops/rollback.mjs"
   },
   "dependencies": {
-    "next": "16.3.5",
+    "next": "16.3.8",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "@supabase/supabase-js": "2.116.0",
@@ -32,18 +32,19 @@
     "resend": "6.28.1"
   },
   "devDependencies": {
-    "typescript": "6.0.3",
+    "@electric-sql/pglite": "0.5.8",
+    "@playwright/test": "1.63.0",
+    "@testing-library/dom": "10.4.2",
+    "@testing-library/react": "16.3.3",
     "@types/node": "26.6.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "vitest": "5.0.1",
-    "jsdom": "30.1.0",
-    "@testing-library/react": "16.3.3",
-    "@testing-library/dom": "10.4.2",
     "eslint": "10.11.0",
-    "eslint-config-next": "16.3.5",
-    "@electric-sql/pglite": "0.5.8",
-    "yaml": "2.9.1",
-    "@playwright/test": "1.63.0"
+    "eslint-plugin-react-hooks": "7.1.1",
+    "jsdom": "30.1.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.70.0",
+    "vitest": "5.0.1",
+    "yaml": "2.9.1"
   }
 }
