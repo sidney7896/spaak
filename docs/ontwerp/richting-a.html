@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>De Spaak demo, richting A: Buurtwinkel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FBF3E4; --paper:#FFFDF8; --ink:#2B1B10; --muted:#65503E;
+  --brand:#A63A1B; --brand-dark:#80290F; --honey:#F4C95D; --honey-soft:#FBEBC1;
+  --line:#D9C8AC; --edge:#8A7254; --ok:#2B6A3C; --ok-soft:#E2F0E0; --bad:#A31F1A; --bad-soft:#FCE8E4;
+  --warn-soft:#FFF3CF; --warn-edge:#8A5A00; --focus:#0B4F9C; --vol-bg:#EBE0CC; --vol-ink:#5B4838;
+  --s-gepland:#6A5638; --s-ontvangen:#2A5D87; --s-bezig:#9A4A00; --s-klaar:#2B6A3C; --s-opgehaald:#4B3F59; --s-geannuleerd:#8A2A20;
+  --serif:'Fraunces',Georgia,'Times New Roman',serif;
+  --sans:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden}
+body{margin:0;background:#E6DAC4;color:var(--ink);font:400 18px/1.5 var(--sans)}
+p{margin:0 0 10px}
+a{color:var(--brand-dark)}
+:where(a,button,input,select,textarea,summary):focus-visible{outline:4px solid var(--focus);outline-offset:3px}
+input.vh:focus-visible+label{outline:4px solid var(--focus);outline-offset:3px}
+.sr{position:absolute!important;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.skip{position:absolute;left:-999px;top:0;background:#fff;color:#000;padding:12px 16px;z-index:50}
+.skip:focus{left:8px;top:8px}
+.wrap{overflow-wrap:anywhere;word-break:break-word}
+
+/* ---- demo-balk (buiten het product) ---- */
+.viewer{background:#2A2622;color:#F4EEE4;padding:10px 16px 12px;font:500 16px/1.4 system-ui,-apple-system,'Segoe UI',Arial,sans-serif}
+.viewer .row{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;max-width:1180px;margin:0 auto 8px}
+.viewer .row:last-child{margin-bottom:0}
+.viewer button,.viewer a.vb{min-height:44px;padding:8px 14px;border:2px solid #9B9285;background:transparent;color:#F4EEE4;border-radius:10px;font-family:inherit;font-weight:600;font-size:16px;line-height:1.2;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center}
+.viewer button[aria-current],.viewer button[aria-pressed="true"]{background:#F4EEE4;color:#2A2622;border-color:#F4EEE4}
+.viewer :focus-visible{outline:4px solid #FFD60A;outline-offset:2px}
+.viewer .tag{font-weight:700;letter-spacing:.04em;text-transform:uppercase;font-size:16px;background:#FFD60A;color:#2A2622;border-radius:6px;padding:2px 8px}
+.viewer .vtoggle{display:inline-flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+.viewer .vtoggle input{width:24px;height:24px;margin:0}
+.viewer .muted{color:#D2C9BC}
+.viewer .sp{flex:1 1 auto}
+.stage{padding:20px 0 48px}
+.device{margin:0 auto;width:100%;background:var(--bg);position:relative}
+.device.phone{max-width:375px}
+.device.tablet{max-width:1180px}
+@media (min-width:420px){.device.phone{border:1px solid #BFAE90;border-radius:28px;overflow:hidden;overflow:clip;box-shadow:0 18px 50px rgba(43,27,16,.18)}}
+@media (min-width:1240px){.device.tablet{border:1px solid #BFAE90;border-radius:24px;overflow:hidden;overflow:clip;box-shadow:0 18px 50px rgba(43,27,16,.18)}}
+
+/* ---- product: kop ---- */
+.top{padding:16px 16px 0}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-name{margin:0;font:700 28px/1 var(--serif)}
+.brand-sub{margin:3px 0 0;font-size:16px;color:var(--muted)}
+.tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:16px 0 0;padding:6px;background:#EFE2CB;border-radius:18px}
+.tabs button{min-height:54px;border:0;border-radius:13px;background:transparent;font:700 18px/1.2 var(--sans);color:var(--ink);cursor:pointer;padding:6px 8px}
+.tabs button[aria-current]{background:var(--brand);color:#fff}
+.body{padding:20px 16px 8px}
+.foot{margin:12px 16px 0;padding:18px 0 24px;border-top:3px dotted var(--line);font-size:16px;color:var(--muted)}
+.foot p{margin:0 0 6px}
+.foot a{font-weight:700}
+h1{font:700 30px/1.15 var(--serif);margin:6px 0 10px;overflow-wrap:anywhere}
+h1:focus{outline:none}
+h2{font:700 22px/1.2 var(--serif);margin:0 0 6px}
+.lead{font-size:18px;color:var(--muted);margin:0 0 18px}
+.progress{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+.kicker{margin:0;font:700 16px/1.2 var(--sans);color:var(--brand-dark);letter-spacing:.03em;text-transform:uppercase}
+.steplabel{margin:2px 0 0;font:600 20px/1.2 var(--serif)}
+.wheel{flex:none}
+
+/* ---- knoppen ---- */
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;min-height:60px;padding:12px 20px;border-radius:16px;border:3px solid var(--brand);background:var(--brand);color:#fff;font:700 20px/1.2 var(--sans);cursor:pointer;text-align:center;text-decoration:none}
+.btn:hover{background:var(--brand-dark);border-color:var(--brand-dark)}
+.btn.secondary{background:transparent;color:var(--brand-dark)}
+.btn.secondary:hover{background:var(--honey-soft);color:var(--ink)}
+.btn.danger{background:var(--bad);border-color:var(--bad)}
+.btn.danger:hover{background:#7E1713;border-color:#7E1713}
+.btn[aria-disabled="true"]{opacity:.7;cursor:progress}
+.actions{display:grid;gap:12px;margin-top:20px}
+.linkbtn{background:none;border:0;padding:10px 0;min-height:48px;font:700 18px var(--sans);color:var(--brand-dark);text-decoration:underline;text-underline-offset:4px;cursor:pointer;display:inline-flex;align-items:center}
+
+/* ---- keuzekaarten (reparatie en tijdvak) ---- */
+fieldset{border:0;margin:0;padding:0;min-width:0}
+.cards{display:grid;gap:12px;margin:0 0 8px}
+.vh{position:absolute;opacity:0;pointer-events:none;width:1px;height:1px}
+.opt label{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;padding:16px 18px;border:3px solid var(--edge);border-radius:18px;background:var(--paper);cursor:pointer;min-height:72px}
+.opt label:hover{background:var(--honey-soft)}
+.co-name{font:700 22px/1.2 var(--serif);grid-column:1;overflow-wrap:anywhere}
+.co-text{grid-column:1;font-size:17px;color:var(--muted)}
+.co-meta{grid-column:1;font:700 17px/1.3 var(--sans);margin-top:4px}
+.co-check{grid-column:2;grid-row:1/span 3;align-self:center;width:34px;height:34px;border-radius:50%;border:3px solid var(--edge);display:grid;place-items:center;color:transparent;font-weight:700;background:#fff}
+.opt input:checked+label{border-color:var(--brand);background:var(--honey-soft);box-shadow:inset 0 0 0 2px var(--brand)}
+.opt input:checked+label .co-check{background:var(--brand);border-color:var(--brand);color:#fff}
+.slots label{grid-template-columns:minmax(0,1fr) auto;min-height:64px}
+.slot-time{font:700 22px/1.2 var(--serif)}
+.slot-note{font:700 17px/1.2 var(--sans);text-align:right}
+.opt input:disabled+label{cursor:not-allowed;background:repeating-linear-gradient(135deg,var(--vol-bg) 0 10px,#E3D7C1 10px 20px);border-style:dashed;border-color:#8F7C64;color:var(--vol-ink)}
+.opt input:disabled+label:hover{background:repeating-linear-gradient(135deg,var(--vol-bg) 0 10px,#E3D7C1 10px 20px)}
+.opt input:disabled+label .slot-time{text-decoration:line-through;text-decoration-thickness:2px}
+.opt input:disabled+label .slot-note{font-size:18px;color:var(--ink)}
+
+/* ---- dagenlijst ---- */
+.days{display:grid;gap:10px;margin:0 0 14px}
+.day{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-height:68px;padding:12px 16px;border:3px solid var(--edge);border-radius:16px;background:var(--paper);font:700 19px/1.25 var(--sans);color:var(--ink);cursor:pointer;text-align:left}
+.day:hover{background:var(--honey-soft)}
+.day-main{min-width:0;display:block}
+.day-name{display:block;overflow-wrap:anywhere}
+.day-rel{display:block;font:400 16px/1.3 var(--sans);color:var(--muted)}
+.chip{flex:none;padding:6px 12px;border-radius:999px;font:700 16px/1.2 var(--sans);white-space:nowrap;border:2px solid transparent}
+.chip.ruim{background:var(--ok-soft);color:#1F5230;border-color:var(--ok)}
+.chip.bijna{background:var(--honey);color:var(--ink);border-color:#9A6B00}
+.chip.vol{background:var(--vol-bg);color:var(--vol-ink);border-color:#8F7C64}
+.chip.dicht{background:transparent;color:var(--muted);border-color:var(--edge);border-style:dashed}
+
+/* ---- paneel, recap, formulier ---- */
+.panel{border:3px solid var(--edge);border-radius:18px;background:var(--paper);padding:16px 18px;margin:0 0 18px}
+.panel.warn{border-color:var(--warn-edge);background:var(--warn-soft)}
+.panel.bad{border-color:var(--bad);background:var(--bad-soft)}
+.panel.good{border-color:var(--ok);background:var(--ok-soft)}
+.panel p:last-child{margin-bottom:0}
+.recap{background:var(--honey-soft);border:3px solid var(--honey);border-radius:18px;padding:14px 16px;margin:0 0 20px}
+.recap p{margin:0 0 4px}
+.recap .rk{font:700 16px var(--sans);color:var(--muted)}
+.recap strong{overflow-wrap:anywhere}
+.field{margin:0 0 22px}
+.field label{display:block;font:700 19px/1.3 var(--sans);margin-bottom:4px}
+.hint{display:block;color:var(--muted);font-size:16px;margin-bottom:8px}
+.input{display:block;width:100%;min-height:58px;padding:12px 14px;border:3px solid var(--edge);border-radius:14px;background:#fff;font:400 20px/1.3 var(--sans);color:var(--ink)}
+textarea.input{min-height:150px;resize:vertical}
+.input.bad{border-color:var(--bad);background:var(--bad-soft)}
+.codein{font:700 28px/1.2 var(--serif);letter-spacing:.14em;text-transform:uppercase}
+.err{display:flex;gap:10px;align-items:flex-start;margin:8px 0 0;color:var(--bad);font:700 17px/1.4 var(--sans)}
+.err::before{content:'!';flex:none;width:26px;height:26px;border-radius:50%;background:var(--bad);color:#fff;display:grid;place-items:center;font-size:16px;margin-top:1px}
+.err span{min-width:0;overflow-wrap:anywhere}
+.count{display:block;text-align:right;font-size:16px;color:var(--muted);margin-top:4px}
+
+/* ---- bevestiging ---- */
+.okbadge{width:60px;height:60px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font:700 32px/1 var(--sans);margin:4px 0 10px}
+.code{display:flex;gap:6px;margin:12px 0 14px;padding:0;list-style:none}
+.code li{flex:1 1 0;min-width:0;aspect-ratio:3/4;display:grid;place-items:center;background:#fff;border:3px solid var(--brand);border-radius:12px;font:700 34px/1 var(--serif);color:var(--brand-dark)}
+.sum{margin:0 0 6px;padding:0}
+.sum div{padding:12px 0;border-bottom:2px dotted var(--line)}
+.sum div:last-child{border-bottom:0}
+.sum dt{font:700 16px/1.3 var(--sans);color:var(--muted)}
+.sum dd{margin:2px 0 0;font-size:19px;overflow-wrap:anywhere;word-break:break-word}
+.card{background:var(--paper);border:3px solid var(--line);border-radius:18px;padding:6px 18px;margin:0 0 18px}
+
+/* ---- status ---- */
+.statusbig{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:14px 16px;border-radius:18px;color:#fff;font:700 30px/1.1 var(--serif);margin:14px 0 8px}
+.statusbig small{font:700 16px var(--sans);letter-spacing:.04em;text-transform:uppercase}
+.s-gepland{--c:var(--s-gepland)}.s-ontvangen{--c:var(--s-ontvangen)}.s-bezig{--c:var(--s-bezig)}.s-klaar{--c:var(--s-klaar)}.s-opgehaald{--c:var(--s-opgehaald)}.s-geannuleerd{--c:var(--s-geannuleerd)}
+.statusbig{background:var(--c)}
+.tl{list-style:none;margin:14px 0;padding:0}
+.tl li{position:relative;display:flex;gap:14px;align-items:flex-start;padding:0 0 18px;font-size:19px;color:var(--muted)}
+.tl li::before{content:'';position:absolute;left:17px;top:38px;bottom:0;width:4px;background:var(--line)}
+.tl li:last-child::before{display:none}
+.tl li:last-child{padding-bottom:0}
+.tl .mk{flex:none;width:38px;height:38px;border-radius:50%;border:3px solid var(--edge);background:#fff;display:grid;place-items:center;font-weight:700;color:var(--muted);font-size:17px}
+.tl .tx{padding-top:5px;min-width:0}
+.tl li.done{color:var(--ink)}
+.tl li.done .mk{background:var(--ok);border-color:var(--ok);color:#fff}
+.tl li.now{color:var(--ink);font-weight:700}
+.tl li.now .mk{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/* ---- monteur (tablet) ---- */
+.m-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;padding:16px 24px;background:var(--ink);color:#FBF3E4}
+.m-top .brand-name{color:#FBF3E4}
+.m-top .brand-sub{color:#E8D9BE}
+.m-who{font-size:18px;text-align:right}
+.m-nav{display:flex;flex-wrap:wrap;align-items:center;gap:12px 14px;padding:18px 24px 6px}
+.m-nav .btn{width:auto;min-height:58px;padding:10px 22px}
+.m-title{flex:1 1 260px;min-width:0;text-align:center}
+.m-title h1{margin:0;font-size:32px}
+.m-title p{margin:2px 0 0;color:var(--muted)}
+.m-stats{display:flex;flex-wrap:wrap;gap:8px;padding:6px 24px 16px;margin:0;list-style:none}
+.m-stats li{padding:6px 14px;border-radius:999px;border:2px solid var(--edge);background:var(--paper);font:700 17px/1.2 var(--sans)}
+.grp{display:grid;grid-template-columns:140px minmax(0,1fr);gap:8px 22px;padding:22px 24px 8px;border-top:3px solid var(--line)}
+.grp-time{align-self:start;position:sticky;top:12px}
+.grp-time h2{font:700 34px/1 var(--serif);margin:0}
+.grp-time p{margin:6px 0 0;font-size:17px;color:var(--muted)}
+.appt{background:var(--paper);border:3px solid var(--edge);border-left:14px solid var(--c,var(--edge));border-radius:18px;padding:16px 18px;margin:0 0 16px;min-width:0}
+.appt-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;align-items:baseline}
+.appt-name{margin:0;font:700 26px/1.2 var(--serif);min-width:0;overflow-wrap:anywhere}
+.appt-code{margin:0;font:700 18px/1.2 var(--sans);letter-spacing:.12em;color:var(--muted)}
+.appt p{margin:6px 0 0}
+.appt-bike{font-size:18px;overflow-wrap:anywhere;word-break:break-word}
+.pill{display:inline-block;padding:2px 12px;border-radius:999px;background:var(--c);color:#fff;font:700 17px/1.5 var(--sans)}
+.statbtns{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.sb{min-height:70px;border:3px solid var(--edge);border-radius:14px;background:#fff;font:700 21px/1.1 var(--sans);color:var(--ink);cursor:pointer;padding:6px;overflow-wrap:anywhere}
+.sb:hover{background:var(--honey-soft)}
+.sb[aria-pressed="true"]{background:var(--c);border-color:var(--c);color:#fff}
+.empty{margin:28px 24px 40px;padding:36px 20px;text-align:center;background:var(--paper);border:3px dashed var(--edge);border-radius:24px}
+.empty h2{font-size:34px;margin:10px 0 8px}
+.empty p{color:var(--muted);font-size:20px}
+.empty .btn{width:auto;display:inline-flex;margin-top:14px;padding:12px 30px}
+@media (max-width:999px){
+  .grp{grid-template-columns:minmax(0,1fr)}
+  .grp-time{position:static;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+  .grp-time p{margin:0}
+}
+@media (max-width:767px){
+  .m-top,.m-nav,.m-stats,.grp{padding-left:16px;padding-right:16px}
+  .empty{margin-left:16px;margin-right:16px}
+  .m-title{text-align:left}
+}
+@media (max-width:620px){.statbtns{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-reduced-motion:no-preference){.opt label,.btn,.day,.sb{transition:background-color .15s,border-color .15s}}
+</style>
+</head>
+<body>
+<a class="skip" href="#app">Direct naar de inhoud</a>
+<nav class="viewer" id="viewer" aria-label="Demo-schakelaar, geen onderdeel van het product"></nav>
+<div class="stage"><div id="app" class="device phone"></div></div>
+<div id="live" class="sr" role="status" aria-live="polite"></div>
+<noscript><p style="padding:16px">Deze demo heeft JavaScript nodig.</p></noscript>
+<script>
+'use strict';
+/*CORE-START*/
+const NOW=new Date(2026,9,8,10,15);
+const TEL='010-555 01 42',TELHREF='tel:+31105550142';
+const DAG=['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+const MND=['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const MND3=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const pad=n=>String(n).padStart(2,'0');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const fromKey=k=>{const p=k.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);};
+const addDays=(d,n)=>new Date(d.getFullYear(),d.getMonth(),d.getDate()+n);
+const cap1=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const TODAY=key(NOW),TOMORROW=key(addDays(NOW,1));
+const dayLong=k=>{const d=fromKey(k);return DAG[d.getDay()]+' '+d.getDate()+' '+MND[d.getMonth()];};
+const dayShort=k=>{const d=fromKey(k);return DAG[d.getDay()].slice(0,2)+' '+d.getDate()+' '+MND3[d.getMonth()];};
+const slotTxt=h=>pad(h)+':00 – '+pad(h+1)+':00';
+const relDay=k=>k===TODAY?'Vandaag':k===TOMORROW?'Morgen':'';
+const TYPES=[
+ {id:'onderhoud',naam:'Onderhoudsbeurt',duur:'60 minuten',prijs:'€69',uitleg:'Een complete controle van remmen, versnellingen, ketting en banden.'},
+ {id:'remmen',naam:'Remmen afstellen',duur:'30 minuten',prijs:'€25',uitleg:'Piepen je remmen of pakken ze slecht? Wij stellen ze goed af.'},
+ {id:'band',naam:'Band plakken',duur:'20 minuten',prijs:'€15',uitleg:'Een lekke band? Wij plakken hem.'},
+ {id:'overig',naam:'Overig',duur:'60 minuten',prijs:'Prijs op offerte',uitleg:'Iets anders, of weet je het niet precies? Vertel het bij je gegevens.'}];
+const typeOf=id=>TYPES.find(t=>t.id===id)||TYPES[3];
+const ST={
+ gepland:{n:'Gepland',t:'Wij verwachten je fiets op het gekozen moment.'},
+ ontvangen:{n:'Ontvangen',t:'Je fiets staat bij ons in de werkplaats. De monteur gaat er zo mee aan de slag.'},
+ bezig:{n:'Bezig',t:'Een monteur werkt nu aan je fiets.'},
+ klaar:{n:'Klaar',t:'Je fiets is klaar. Je kunt hem komen ophalen tijdens onze openingstijden.'},
+ opgehaald:{n:'Opgehaald',t:'Je hebt je fiets opgehaald. Fijne ritten!'},
+ geannuleerd:{n:'Geannuleerd',t:'Deze afspraak is geannuleerd. De plek is weer vrij voor een andere klant.'}};
+const FLOW=['gepland','ontvangen','bezig','klaar','opgehaald'];
+const MECH=['ontvangen','bezig','klaar','opgehaald'];
+function dayInfo(d){const w=d.getDay();if(w===0||w===1)return{open:false,naam:DAG[w]};const sat=w===6;return{open:true,cap:sat?3:2,hours:sat?[9,10,11,12,13,14,15]:[9,10,11,12,13,14,15,16]};}
+const bookings=[];
+const bk=(code,type,n,hour,name,phone,email,bike,status)=>bookings.push({code,type,date:key(addDays(NOW,n)),hour,name,phone,email,bike,status});
+const ALF='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function newCode(){let c;do{c='';for(let i=0;i<6;i++)c+=ALF[Math.floor(Math.random()*ALF.length)];}while(bookings.some(b=>b.code===c));return c;}
+(function seed(){
+ bk('R7TQ2D','onderhoud',0,9,'Jolanda de Vries','06 1234 5601','jolanda@voorbeeld.nl','Zwarte Gazelle damesfiets, ketting piept','opgehaald');
+ bk('H8KP3W','remmen',0,9,'Henk Bakker','06 1234 5602','henk@voorbeeld.nl','Blauwe Batavus stadsfiets, rem voor pakt slecht','klaar');
+ bk('K4M9ZB','band',0,10,'Samira El Amrani','06 1234 5603','samira@voorbeeld.nl','Rode Stella, achterband is lek','bezig');
+ bk('W3N8XF','onderhoud',0,10,'Peter Jansen','06 1234 5604','peter@voorbeeld.nl','Bakfiets met elektrische trapondersteuning','ontvangen');
+ bk('T5YC6E','overig',0,11,'Tom Smit','06 1234 5605','tom@voorbeeld.nl','Kinderfiets 20 inch, stuur zit los','gepland');
+ bk('M2DX9R','onderhoud',0,13,'Marieke van Dijk','06 1234 5606','marieke@voorbeeld.nl','Groene Giant, versnellingen slaan over','gepland');
+ bk('P6C4HG','remmen',1,10,'Kees Mulder','06 1234 5607','kees@voorbeeld.nl','Grijze Sparta, remmen piepen','gepland');
+ bk('E9RL5S','band',1,10,'Els de Boer','06 1234 5608','els@voorbeeld.nl','Witte opafiets, voorband lek','gepland');
+ bk('B3ZN7V','onderhoud',1,11,'Bram Peters','06 1234 5609','bram@voorbeeld.nl','Racefiets, jaarlijkse beurt','gepland');
+ const FN=['Wim Hendriks','Fatima Yilmaz','Dirk Kok','Lisa Brouwer','Jan Veenstra','Noor Bos','Rob Dekker','Sanne Meijer','Hugo Willems','Ilse Smeets','Mo Aydin','Eva Prins'];
+ const FB=['Zwarte stadsfiets','Bakfiets','Racefiets','Kinderfiets','Elektrische fiets','Vouwfiets','Mountainbike'];
+ const FT=['onderhoud','remmen','band','overig'];
+ let i=0;for(let h=9;h<=15;h++)for(let j=0;j<3;j++,i++)bk(newCode(),FT[i%4],2,h,FN[i%12],'06 1234 57'+pad(i),'klant'+i+'@voorbeeld.nl',FB[i%7],'gepland');
+ bk('D2V9LA','onderhoud',5,11,'Anna Visser','06 1234 5610','anna@voorbeeld.nl','Oranje Gazelle, jaarlijkse onderhoudsbeurt','gepland');
+})();
+const byCode=c=>bookings.find(b=>b.code===c);
+const normCode=s=>String(s||'').toUpperCase().replace(/[\s-]/g,'');
+const active=b=>b.status!=='geannuleerd';
+const taken=(dk,h)=>bookings.filter(b=>b.date===dk&&b.hour===h&&active(b)).length;
+function free(dk,h){const i=dayInfo(fromKey(dk));return i.open?Math.max(0,i.cap-taken(dk,h)):0;}
+function dayState(k){const i=dayInfo(fromKey(k));if(!i.open)return{kind:'dicht'};let f=0;i.hours.forEach(h=>f+=free(k,h));if(!f)return{kind:'vol',free:0};return{kind:f<=3?'bijna':'ruim',free:f};}
+function nextFreeDay(k){for(let n=1;n<=90;n++){const x=key(addDays(fromKey(k),n));const s=dayState(x).kind;if(s==='ruim'||s==='bijna')return x;}return null;}
+function validate(f){const e={};
+ const name=f.name.trim(),ph=f.phone.trim(),em=f.email.trim(),bike=f.bike.trim();
+ if(!name)e.name='Vul je naam in.';else if(name.length>60)e.name='Je naam mag niet langer zijn dan 60 tekens.';
+ if(!ph)e.phone='Vul je telefoonnummer in.';
+ else if(/[^\d\s+\-()]/.test(ph))e.phone='Een telefoonnummer bestaat alleen uit cijfers, bijvoorbeeld 06 12345678.';
+ else if(ph.replace(/\D/g,'').length<10)e.phone='Dit nummer is te kort. Een nummer heeft 10 cijfers, bijvoorbeeld 06 12345678.';
+ if(!em)e.email='Vul je e-mailadres in.';
+ else if(em.indexOf('@')<0)e.email='In dit e-mailadres mist een @, bijvoorbeeld naam@voorbeeld.nl.';
+ else if(!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em))e.email='Dit e-mailadres klopt nog niet, bijvoorbeeld naam@voorbeeld.nl.';
+ if(!bike)e.bike='Vertel kort welke fiets het is en wat eraan moet.';else if(bike.length>500)e.bike='Je omschrijving mag niet langer zijn dan 500 tekens.';
+ return e;}
+function createBooking(st){
+ if(free(st.day,st.hour)<=0)return{ok:false,reason:'vol'};
+ const f=st.form,b={code:newCode(),type:st.type,date:st.day,hour:st.hour,name:f.name.trim(),phone:f.phone.trim(),email:f.email.trim(),bike:f.bike.trim(),status:'gepland'};
+ bookings.push(b);return{ok:true,b};}
+const startOf=b=>{const p=b.date.split('-').map(Number);return new Date(p[0],p[1]-1,p[2],b.hour,0);};
+function cancelRule(b){
+ if(b.status==='geannuleerd')return{kind:'geannuleerd'};
+ if(b.status!=='gepland')return{kind:'binnen'};
+ const s=startOf(b),limit=new Date(NOW.getFullYear(),NOW.getMonth(),NOW.getDate()+1,NOW.getHours(),NOW.getMinutes());
+ const dl=new Date(s.getFullYear(),s.getMonth(),s.getDate()-1,s.getHours(),0);
+ if(s>=limit)return{kind:'ja',deadline:DAG[dl.getDay()]+' '+dl.getDate()+' '+MND[dl.getMonth()]+' om '+pad(dl.getHours())+':'+pad(dl.getMinutes())};
+ return{kind:'telaat'};}
+function setStatus(code,s){const b=byCode(code);if(b&&b.status!=='geannuleerd'&&ST[s])b.status=s;return b;}
+function cancelBooking(code){const b=byCode(code);if(b&&cancelRule(b).kind==='ja'){b.status='geannuleerd';return true;}return false;}
+const LONG_NAME='Johanna Maria Geertruida van Oosterhuizen-Vermeulen-Hendriks';
+const LONG_BIKE=('Zwarte Gazelle damesfiets met een mand voorop en een kinderzitje achterop. De ketting piept bij elke trap, het achterlicht doet het soms niet en de remmen pakken pas als ik heel hard knijp. Ook rammelt het voorspatbord op hobbelige fietspaden. Onderdeelnummer ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789ABCDEF staat op de achternaaf. Ik fiets elke dag naar mijn werk, dus ik heb de fiets het liefst dezelfde dag weer terug. ').repeat(3).slice(0,500);
+function setLongBooking(on){const i=bookings.findIndex(b=>b.code==='LANG77');if(on&&i<0)bookings.push({code:'LANG77',type:'overig',date:TODAY,hour:11,name:LONG_NAME,phone:'06 1234 5699',email:'lang@voorbeeld.nl',bike:LONG_BIKE,status:'ontvangen'});if(!on&&i>=0)bookings.splice(i,1);}
+/*CORE-END*/
+
+/* ================= richting A: Buurtwinkel ================= */
+const $=id=>document.getElementById(id);
+const SAMPLES=[['D2V9LA','Gepland, ruim op tijd'],['P6C4HG','Gepland, binnen 24 uur'],['W3N8XF','Ontvangen'],['K4M9ZB','Bezig'],['H8KP3W','Klaar'],['ZZZZZZ','Onbekende code']];
+const HASH={book:'afspraak',status:'status',mech:'monteur'};
+const S={screen:'book',step:1,sub:'days',dayCount:7,type:null,day:null,hour:null,form:{name:'',phone:'',email:'',bike:''},err:{},busy:false,notice:'',done:null,code:'',look:null,ask:false,mday:TODAY,emptyToday:false,long:false};
+
+function wheel(done){
+ let s='<svg class="wheel" viewBox="0 0 64 64" width="56" height="56" aria-hidden="true" focusable="false"><circle cx="32" cy="32" r="29" fill="none" stroke="'+(done>=8?'var(--brand)':'var(--line)')+'" stroke-width="5"/>';
+ for(let i=0;i<8;i++){const a=i*Math.PI/4-Math.PI/2;s+='<line x1="32" y1="32" x2="'+(32+Math.cos(a)*25).toFixed(1)+'" y2="'+(32+Math.sin(a)*25).toFixed(1)+'" stroke="'+(i<done?'var(--brand)':'var(--line)')+'" stroke-width="4" stroke-linecap="round"/>';}
+ return s+'<circle cx="32" cy="32" r="6" fill="#2B1B10"/></svg>';}
+const errMsg=k=>S.err[k]?`<p class="err" id="e-${k}" role="alert"><span>${esc(S.err[k])}</span></p>`:'';
+function progress(n){const l=['Reparatie','Dag en tijd','Je gegevens','Klaar'];return `<div class="progress">${wheel(n*2)}<div><p class="kicker">Stap ${n} van 4</p><p class="steplabel">${l[n-1]}</p></div></div>`;}
+function shell(inner){return `<header class="top"><div class="brand">${wheel(8)}<div><p class="brand-name">De Spaak</p><p class="brand-sub">Fietsenmakerij</p></div></div>
+<nav class="tabs" aria-label="Hoofdmenu"><button id="tab-book" data-act="screen" data-to="book"${S.screen==='book'?' aria-current="page"':''}>Afspraak maken</button><button id="tab-status" data-act="screen" data-to="status"${S.screen==='status'?' aria-current="page"':''}>Status bekijken</button></nav></header>
+<main class="body">${inner}</main>
+<footer class="foot"><p><strong>Liever bellen?</strong> <a href="${TELHREF}">${TEL}</a></p><p>Open di t/m vr 08:30–17:30 en za 09:00–16:00. Op zondag en maandag zijn we dicht.</p></footer>`;}
+
+/* ---- viewer (demo-balk) ---- */
+function vViewer(){
+ const b=(id,sc,t)=>`<button id="${id}" data-act="screen" data-to="${sc}"${S.screen===sc?' aria-current="page"':''}>${t}</button>`;
+ let help='';
+ if(S.screen==='book')help=`<button id="h-err" data-act="demoerr">Toon foutmelding in het formulier</button><button id="h-reset" data-act="reset">Opnieuw beginnen</button>`;
+ else if(S.screen==='status')help='<span class="muted">Probeer een code:</span>'+SAMPLES.map(s=>`<button data-act="sample" data-code="${s[0]}">${s[0]} <span class="muted">${s[1]}</span></button>`).join('')+(S.done?`<button data-act="sample" data-code="${S.done.code}">${S.done.code} <span class="muted">Zojuist gemaakt</span></button>`:'');
+ else help=`<button id="h-empty" data-act="demoempty" aria-pressed="${S.emptyToday}">Lege dag tonen</button>`;
+ return `<div class="row"><span class="tag">Demo</span><strong>Richting A · Buurtwinkel</strong><span class="sp"></span><a class="vb" href="richting-b.html">Naar richting B</a></div>
+<div class="row">${b('v-book','book','1 Afspraak maken (telefoon)')}${b('v-status','status','2 Status (telefoon)')}${b('v-mech','mech','3 Dagoverzicht (tablet)')}
+<label class="vtoggle"><input type="checkbox" id="v-long" data-act="long"${S.long?' checked':''}> Lang voorbeeld (naam 60, fiets 500 tekens)</label></div>
+<div class="row"><span class="muted">Demo-hulp:</span>${help}<span class="sp"></span><span class="muted">Demo-datum: ${dayLong(TODAY)} 2026, 10:15</span></div>`;}
+
+/* ---- klant: afspraak maken ---- */
+function vBook(){return S.step===1?vType():S.step===2?(S.sub==='days'?vDays():vSlots()):S.step===3?vForm():vDone();}
+function vType(){
+ return shell(`<section aria-labelledby="stepTitle">${progress(1)}<h1 id="stepTitle" tabindex="-1">Wat moet er aan je fiets gebeuren?</h1><p class="lead">Kies wat het beste past. Twijfel je? Kies dan Overig.</p>
+<fieldset class="cards"><legend class="sr">Kies een reparatie</legend>${TYPES.map(t=>`<div class="opt"><input class="vh" type="radio" name="type" id="t-${t.id}" value="${t.id}"${S.type===t.id?' checked':''}><label for="t-${t.id}"><span class="co-name">${t.naam}</span><span class="co-text">${t.uitleg}</span><span class="co-meta">${t.duur} · ${t.prijs}</span><span class="co-check" aria-hidden="true">✓</span></label></div>`).join('')}</fieldset>
+${errMsg('type')}<div class="actions"><button class="btn" id="b-next1" data-act="next1">Verder</button></div></section>`);}
+function vDays(){
+ const rows=[];
+ for(let i=0;i<S.dayCount;i++){const k=key(addDays(fromKey(TOMORROW),i)),st=dayState(k).kind;
+  const txt={ruim:'Plek vrij',bijna:'Bijna vol',vol:'Vol',dicht:'Gesloten'}[st];
+  rows.push(`<button class="day" id="day-${k}" data-act="pickday" data-k="${k}"><span class="day-main"><span class="day-name">${cap1(dayLong(k))}</span>${relDay(k)?`<span class="day-rel">${relDay(k)}</span>`:''}</span><span class="chip ${st}">${txt}</span></button>`);}
+ return shell(`<section aria-labelledby="stepTitle">${progress(2)}<h1 id="stepTitle" tabindex="-1">Op welke dag kom je langs?</h1><p class="lead">Je kunt vanaf morgen een afspraak maken. Voor vandaag? Bel ons op <a href="${TELHREF}">${TEL}</a>.</p>
+<div class="days">${rows.join('')}</div>${S.dayCount<28?'<button class="btn secondary" id="b-more" data-act="moredays">Toon een week meer</button>':''}
+<div class="actions"><button class="btn secondary" data-act="edit1">Terug</button></div></section>`);}
+function vSlots(){
+ const k=S.day,i=dayInfo(fromKey(k)),st=dayState(k),nf=nextFreeDay(k);
+ let body='';
+ if(!i.open||st.kind==='vol'){
+  body=`<div class="panel warn" role="status"><h2>${!i.open?'Op '+i.naam+' zijn we dicht':'Deze dag is helemaal vol'}</h2><p>${!i.open?'We zijn open van dinsdag t/m vrijdag van 08:30 tot 17:30 en op zaterdag van 09:00 tot 16:00.':'Alle tijdvakken van '+dayLong(k)+' zijn bezet.'}</p>${nf?`<p>De eerstvolgende dag met een vrij tijdvak is <strong>${dayLong(nf)}</strong>.</p>`:''}</div>
+<div class="actions">${nf?`<button class="btn" id="b-nf" data-act="pickday" data-k="${nf}">Kies ${dayLong(nf)}</button>`:''}<button class="btn secondary" data-act="backdays">Andere dag kiezen</button></div>`;
+ }else{
+  body=`${S.notice?`<div class="panel bad" role="alert"><h2>${esc(S.notice)}</h2><p>Je gegevens blijven staan.</p></div>`:''}<p class="lead">Kies een tijdvak. Je brengt je fiets in dat uur.</p>
+<fieldset class="cards slots"><legend class="sr">Kies een tijdvak</legend>${i.hours.map(h=>{const f=free(k,h),dis=f<=0;return `<div class="opt"><input class="vh" type="radio" name="slot" id="s-${h}" value="${h}"${dis?' disabled':''}${S.hour===h?' checked':''}><label for="s-${h}"><span class="slot-time">${slotTxt(h)}</span><span class="slot-note">${dis?'Vol':f===1?'Nog 1 plek':'Nog '+f+' plekken'}</span></label></div>`;}).join('')}</fieldset>
+${S.hour!=null?`<div class="recap"><p class="rk">Jouw keuze</p><p><strong>${dayLong(k)}, ${slotTxt(S.hour)}</strong></p></div>`:''}${errMsg('slot')}
+<div class="actions"><button class="btn" id="b-next2" data-act="next2">Verder naar je gegevens</button><button class="btn secondary" data-act="backdays">Andere dag kiezen</button></div>`;
+ }
+ return shell(`<section aria-labelledby="stepTitle">${progress(2)}<h1 id="stepTitle" tabindex="-1">${cap1(dayLong(k))}</h1>${body}</section>`);}
+function field(id,label,hint,control){return `<div class="field"><label for="f-${id}">${label}</label>${hint?`<span class="hint" id="h-${id}">${hint}</span>`:''}${control}${errMsg(id)}</div>`;}
+function inp(id,type,auto,extra,hint){const e=S.err[id],d=((hint?'h-'+id:'')+(e?' e-'+id:'')).trim();return `<input class="input${e?' bad':''}" id="f-${id}" name="${id}" type="${type}" data-f="${id}" value="${esc(S.form[id])}" autocomplete="${auto}" ${extra||''}${d?' aria-describedby="'+d+'"':''}${e?' aria-invalid="true"':''}>`;}
+function vForm(){
+ const t=typeOf(S.type),n=Object.keys(S.err).filter(k=>S.err[k]).length;
+ return shell(`<section aria-labelledby="stepTitle">${progress(3)}<h1 id="stepTitle" tabindex="-1">Je gegevens</h1>
+<div class="recap"><p class="rk">Jouw afspraak</p><p><strong>${t.naam}</strong></p><p>${dayLong(S.day)}, ${slotTxt(S.hour)}</p><p><button class="linkbtn" data-act="edit1">Andere reparatie</button> <button class="linkbtn" data-act="edit2">Andere dag of tijd</button></p></div>
+${n?`<div class="panel bad" role="alert"><h2>Er klopt nog iets niet</h2><p>Kijk even naar ${n>1?'de rode velden':'het rode veld'} hieronder.</p></div>`:''}
+<form data-form="details" novalidate>
+${field('name','Je naam','',inp('name','text','name','maxlength="80"'))}
+${field('phone','Je telefoonnummer','Dan kunnen we je bellen als er iets is.',inp('phone','tel','tel','inputmode="tel"',1))}
+${field('email','Je e-mailadres','Voor als we je iets moeten laten weten.',inp('email','email','email','inputmode="email" autocapitalize="none" spellcheck="false"',1))}
+${field('bike','Je fiets en wat eraan moet','Bijvoorbeeld: zwarte Gazelle damesfiets, de achterband is lek.',`<textarea class="input${S.err.bike?' bad':''}" id="f-bike" name="bike" data-f="bike" rows="5" maxlength="500" aria-describedby="h-bike${S.err.bike?' e-bike':''}"${S.err.bike?' aria-invalid="true"':''}>${esc(S.form.bike)}</textarea><span class="count" id="cnt">${S.form.bike.length} van 500 tekens</span>`)}
+<div class="actions"><button class="btn" type="submit" id="b-confirm" aria-disabled="${S.busy}">${S.busy?'Even geduld…':'Bevestig mijn afspraak'}</button><button class="btn secondary" type="button" data-act="edit2">Terug</button></div></form></section>`);}
+function summary(b){const t=typeOf(b.type);return `<dl class="sum"><div><dt>Reparatie</dt><dd>${t.naam}</dd></div><div><dt>Dag</dt><dd>${cap1(dayLong(b.date))}</dd></div><div><dt>Tijdvak</dt><dd>${slotTxt(b.hour)}</dd></div><div><dt>Naam</dt><dd>${esc(b.name)}</dd></div><div><dt>Telefoon</dt><dd>${esc(b.phone)}</dd></div><div><dt>E-mail</dt><dd>${esc(b.email)}</dd></div><div><dt>Fiets</dt><dd>${esc(b.bike)}</dd></div></dl>`;}
+function vDone(){const b=S.done;
+ return shell(`<section aria-labelledby="stepTitle">${progress(4)}<div class="okbadge" aria-hidden="true">✓</div><h1 id="stepTitle" tabindex="-1">Je afspraak staat vast!</h1><p class="lead">Dit is je afspraakcode. Schrijf hem op of maak een schermafdruk. Met deze code bekijk je de status of annuleer je.</p>
+<p class="sr">Je afspraakcode is ${b.code.split('').join(' ')}</p><ul class="code" aria-hidden="true">${b.code.split('').map(c=>`<li>${c}</li>`).join('')}</ul>
+<div class="card">${summary(b)}</div><p class="lead">Annuleren kan tot 24 uur voor je afspraak.</p>
+<div class="actions"><button class="btn" id="b-tostatus" data-act="tostatus">Bekijk de status</button><button class="btn secondary" data-act="copy">Kopieer de code</button><button class="btn secondary" data-act="reset">Nog een afspraak maken</button></div></section>`);}
+
+/* ---- klant: status ---- */
+function vStatus(){
+ const L=S.look;let res='';
+ if(L&&L.found)res=vFound(byCode(L.code));
+ else if(L&&L.found===false)res=`<div class="panel bad"><h2>Geen afspraak gevonden met deze code</h2><p>Controleer of je alle 6 tekens goed hebt overgenomen. Lukt het niet? Bel ons op <a href="${TELHREF}">${TEL}</a>.</p></div>`;
+ return shell(`<h1 id="stepTitle" tabindex="-1">Hoe staat het met je fiets?</h1><p class="lead">Vul je afspraakcode in. Die staat in je bevestiging.</p>
+<form data-form="look" novalidate><div class="field"><label for="code">Je afspraakcode</label><span class="hint" id="h-code">6 letters en cijfers, bijvoorbeeld X7K2PQ</span><input class="input codein${S.err.code?' bad':''}" id="code" name="code" value="${esc(S.code)}" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-describedby="h-code${S.err.code?' e-code':''}"${S.err.code?' aria-invalid="true"':''}>${errMsg('code')}</div>
+<button class="btn" type="submit" id="b-look">Toon status</button></form>${res?`<div id="result" tabindex="-1" role="status" style="margin-top:22px">${res}</div>`:''}`);}
+function vFound(b){
+ const st=ST[b.status],r=cancelRule(b),cur=FLOW.indexOf(b.status);
+ const flow=b.status==='geannuleerd'?'':`<ol class="tl" aria-label="Voortgang van je reparatie">${FLOW.map((s,i)=>{const c=i<cur?'done':i===cur?'now':'';return `<li class="${c}"${c==='now'?' aria-current="step"':''}><span class="mk" aria-hidden="true">${c==='done'?'✓':c==='now'?'●':i+1}</span><span class="tx">${ST[s].n}${c==='now'?'<span class="sr"> (huidige stap)</span>':''}</span></li>`;}).join('')}</ol>`;
+ let cancel='';
+ if(r.kind==='ja')cancel=S.ask?`<div class="panel warn" role="alertdialog" aria-labelledby="ask-t"><h2 id="ask-t">Weet je zeker dat je wilt annuleren?</h2><p>Je plek in het tijdvak komt dan weer vrij.</p><div class="actions"><button class="btn danger" id="b-yes" data-act="cancelyes" data-code="${b.code}">Ja, annuleer mijn afspraak</button><button class="btn secondary" id="b-no" data-act="cancelno">Nee, ik kom toch</button></div></div>`
+  :`<div class="panel"><h2>Annuleren</h2><p>Je kunt annuleren tot ${r.deadline}, 24 uur voor je afspraak.</p><button class="btn secondary" id="b-cancel" data-act="cancelask">Afspraak annuleren</button></div>`;
+ else if(r.kind==='telaat')cancel=`<div class="panel warn"><h2>Annuleren kan hier niet meer</h2><p>Je afspraak begint over minder dan 24 uur. Wil je toch annuleren? Bel de winkel.</p><a class="btn" href="${TELHREF}">Bel ${TEL}</a></div>`;
+ else if(r.kind==='binnen')cancel=`<div class="panel"><h2>Annuleren</h2><p>Dat kan niet meer, want je fiets is al bij ons. Vragen? Bel ons op <a href="${TELHREF}">${TEL}</a>.</p></div>`;
+ return `<section class="s-${b.status}" aria-label="Afspraak ${b.code}"><h2>Afspraak ${b.code}</h2><p class="statusbig"><small>Status</small> ${st.n}</p><p>${st.t}</p>${flow}
+<div class="card"><dl class="sum"><div><dt>Dag</dt><dd>${cap1(dayLong(b.date))}</dd></div><div><dt>Tijdvak</dt><dd>${slotTxt(b.hour)}</dd></div><div><dt>Reparatie</dt><dd>${typeOf(b.type).naam}</dd></div><div><dt>Op naam van</dt><dd>${esc(b.name)}</dd></div><div><dt>Fiets</dt><dd>${esc(b.bike)}</dd></div></dl></div>${cancel}</section>`;}
+
+/* ---- monteur: dagoverzicht ---- */
+function vMech(){
+ const dk=S.mday;let list=bookings.filter(b=>b.date===dk&&active(b));if(dk===TODAY&&S.emptyToday)list=[];
+ const cancelled=bookings.filter(b=>b.date===dk&&!active(b)).length;
+ const groups={};list.forEach(b=>(groups[b.hour]=groups[b.hour]||[]).push(b));
+ const hours=Object.keys(groups).map(Number).sort((a,b)=>a-b);
+ const next=key(addDays(fromKey(dk),1)),i=dayInfo(fromKey(dk));
+ const nav=`<div class="m-nav"><button class="btn secondary" id="m-prev" data-act="mday" data-d="-1">← Eerder</button><div class="m-title"><h1 id="stepTitle" tabindex="-1">${cap1(dayLong(dk))}</h1><p>${relDay(dk)||'&nbsp;'}</p></div>${dk!==TODAY?'<button class="btn secondary" data-act="mtoday">Naar vandaag</button>':''}<button class="btn secondary" id="m-next" data-act="mday" data-d="1">Later →</button></div>`;
+ const counts=FLOW.map(s=>[s,list.filter(b=>b.status===s).length]).filter(x=>x[1]);
+ const stats=list.length?`<ul class="m-stats" aria-label="Overzicht"><li>${list.length} ${list.length===1?'afspraak':'afspraken'}</li>${counts.map(c=>`<li>${ST[c[0]].n}: ${c[1]}</li>`).join('')}${cancelled?`<li>Geannuleerd: ${cancelled}</li>`:''}</ul>`:'';
+ let main='';
+ if(!list.length){
+  main=`<div class="empty">${wheel(0).replace('width="56" height="56"','width="88" height="88"')}<h2>${dk===TODAY?'Geen afspraken vandaag':'Geen afspraken op '+dayLong(dk)}</h2><p>${!i.open?'De winkel is op '+i.naam+' dicht.':'Er staat niets in de agenda.'}</p><button class="btn" id="m-tomorrow" data-act="mday" data-d="1">${dk===TODAY?'Bekijk morgen':'Bekijk '+dayLong(next)}</button></div>`;
+ }else main=hours.map(h=>`<section class="grp" aria-label="Tijdvak ${slotTxt(h)}"><div class="grp-time"><h2>${pad(h)}:00</h2><p>tot ${pad(h+1)}:00 · ${groups[h].length} van ${i.cap}</p></div><div>${groups[h].map(card).join('')}</div></section>`).join('');
+ return `<header class="m-top"><div class="brand">${wheel(8)}<div><p class="brand-name">De Spaak</p><p class="brand-sub">Werkplaats · dagoverzicht</p></div></div><p class="m-who">Ingelogd als <strong>Lotte</strong></p></header>${nav}${stats}<main>${main}</main>`;}
+function card(b){const t=typeOf(b.type);
+ return `<article class="appt s-${b.status}" aria-labelledby="n-${b.code}"><div class="appt-head"><h3 class="appt-name" id="n-${b.code}">${esc(b.name)}</h3><p class="appt-code">${b.code}</p></div>
+<p><strong>${t.naam}</strong> · ${t.duur}</p><p class="appt-bike">${esc(b.bike)}</p><p><a href="tel:${b.phone.replace(/[^\d+]/g,'')}">${esc(b.phone)}</a></p><p>Nu: <span class="pill">${ST[b.status].n}</span></p>
+<div class="statbtns" role="group" aria-label="Status van ${esc(b.name)}">${MECH.map(s=>`<button class="sb s-${s}" id="sb-${b.code}-${s}" data-act="mstatus" data-code="${b.code}" data-s="${s}" aria-pressed="${b.status===s}">${b.status===s?'<span aria-hidden="true">✓ </span>':''}${ST[s].n}</button>`).join('')}</div></article>`;}
+
+/* ---- glue ---- */
+function say(t){const l=$('live');l.textContent='';setTimeout(()=>{l.textContent=t;},30);}
+function setHash(){try{history.replaceState(null,'','#'+HASH[S.screen]);}catch(e){}}
+function render(focus,scroll){
+ const ae=document.activeElement,id=ae&&ae!==document.body?ae.id:'';
+ $('viewer').innerHTML=vViewer();
+ const app=$('app');app.className='device '+(S.screen==='mech'?'tablet':'phone');
+ app.innerHTML=S.screen==='book'?vBook():S.screen==='status'?vStatus():vMech();
+ if(scroll){const r=app.getBoundingClientRect();if(r.top<0)window.scrollBy(0,r.top-8);}
+ const t=focus?document.querySelector(focus):(id?document.getElementById(id):null);
+ if(t){try{t.focus({preventScroll:!focus||!!scroll});}catch(e){}}}
+function resetBook(){Object.assign(S,{step:1,sub:'days',dayCount:7,type:null,day:null,hour:null,err:{},busy:false,notice:'',done:null});S.form=S.long?{name:LONG_NAME,phone:'06 1234 5678',email:'lang@voorbeeld.nl',bike:LONG_BIKE}:{name:'',phone:'',email:'',bike:''};}
+function lookup(code){S.code=code;S.ask=false;const c=normCode(code);S.err={};
+ if(!c){S.err.code='Vul eerst je afspraakcode in.';S.look=null;render('#code');return;}
+ const b=byCode(c);S.look=b?{found:true,code:c}:{found:false};render('#result');say(b?'Status gevonden: '+ST[b.status].n:'Geen afspraak gevonden met deze code');}
+function submitDetails(){
+ if(S.busy)return;
+ S.err=validate(S.form);const first=['name','phone','email','bike'].find(k=>S.err[k]);
+ if(first){render('#f-'+first);say('Er klopt nog iets niet in je gegevens.');return;}
+ S.busy=true;render();
+ setTimeout(()=>{const r=createBooking(S);S.busy=false;
+  if(!r.ok){S.step=2;S.sub='slots';S.hour=null;S.notice='Dit tijdvak is net vol geraakt. Kies een ander tijdvak.';render('#stepTitle',true);return;}
+  S.done=r.b;S.step=4;render('#stepTitle',true);say('Je afspraak staat vast. Je code is '+r.b.code.split('').join(' '));},650);}
+function act(a,d,el){
+ switch(a){
+  case 'screen':S.screen=d.to;setHash();render();break;
+  case 'next1':if(!S.type){S.err.type='Kies eerst wat er aan je fiets moet gebeuren.';render('#b-next1');}else{S.err={};S.step=2;S.sub='days';render('#stepTitle',true);}break;
+  case 'pickday':S.day=d.k;S.hour=null;S.sub='slots';S.notice='';S.err={};render('#stepTitle',true);break;
+  case 'backdays':S.sub='days';render('#stepTitle',true);break;
+  case 'moredays':{const first=key(addDays(fromKey(TOMORROW),S.dayCount));S.dayCount+=7;render('#day-'+first);break;}
+  case 'next2':if(S.hour==null){S.err.slot='Kies eerst een tijdvak.';render('#b-next2');}else{S.err={};S.step=3;render('#stepTitle',true);}break;
+  case 'edit1':S.step=1;render('#stepTitle',true);break;
+  case 'edit2':S.step=2;S.sub='slots';S.err={};render('#stepTitle',true);break;
+  case 'reset':resetBook();S.screen='book';setHash();render('#stepTitle',true);break;
+  case 'copy':try{navigator.clipboard.writeText(S.done.code).then(()=>{el.textContent='Gekopieerd ✓';say('Code gekopieerd');},()=>say('Kopiëren lukt hier niet. Schrijf de code op.'));}catch(e){say('Kopiëren lukt hier niet. Schrijf de code op.');}break;
+  case 'tostatus':S.screen='status';setHash();S.code=S.done.code;S.look={found:true,code:S.done.code};S.err={};render('#stepTitle',true);break;
+  case 'sample':S.screen='status';setHash();lookup(d.code);break;
+  case 'cancelask':S.ask=true;render('#b-no');break;
+  case 'cancelno':S.ask=false;render('#b-cancel');break;
+  case 'cancelyes':if(cancelBooking(d.code)){S.ask=false;render('#result');say('Je afspraak is geannuleerd. De plek is weer vrij.');}break;
+  case 'mday':S.mday=key(addDays(fromKey(S.mday),+d.d));render('#stepTitle',true);break;
+  case 'mtoday':S.mday=TODAY;render('#stepTitle',true);break;
+  case 'mstatus':{const b=setStatus(d.code,d.s);render('#sb-'+d.code+'-'+d.s);if(b)say(b.name+' staat op '+ST[b.status].n);break;}
+  case 'demoempty':S.emptyToday=!S.emptyToday;S.mday=TODAY;render('#h-empty');break;
+  case 'demoerr':resetBook();S.screen='book';setHash();S.type='onderhoud';S.day=TOMORROW;S.hour=11;S.step=3;
+   S.form={name:'Mila Hoekstra',phone:'06 1234 abcd',email:'mila@voorbeeld.nl',bike:'Zwarte Gazelle damesfiets, de achterband is lek.'};
+   S.err=validate(S.form);render('#f-phone');say('Er klopt nog iets niet in je gegevens.');break;
+ }}
+function setLong(on){
+ const was=S.long;S.long=on;setLongBooking(on);
+ if(on){S.form={name:LONG_NAME,phone:'06 1234 5678',email:'lang@voorbeeld.nl',bike:LONG_BIKE};}
+ else if(was&&S.form.name===LONG_NAME){S.form={name:'',phone:'',email:'',bike:''};}
+ S.err={};render();}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t||t.tagName==='INPUT')return;act(t.dataset.act,t.dataset,t);});
+document.addEventListener('change',e=>{const t=e.target;
+ if(t.dataset.act==='long'){setLong(t.checked);return;}
+ if(t.name==='type'){S.type=t.value;S.err.type='';render();}
+ else if(t.name==='slot'){S.hour=+t.value;S.err.slot='';S.notice='';render();}});
+document.addEventListener('input',e=>{const t=e.target;
+ if(t.dataset.f){S.form[t.dataset.f]=t.value;if(t.dataset.f==='bike'){const c=$('cnt');if(c)c.textContent=t.value.length+' van 500 tekens';}}
+ else if(t.id==='code')S.code=t.value;});
+document.addEventListener('submit',e=>{e.preventDefault();const f=e.target.dataset.form;
+ if(f==='details')submitDetails();else if(f==='look')lookup($('code').value);});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1),f=Object.keys(HASH).find(k=>HASH[k]===h);if(f&&f!==S.screen){S.screen=f;render();}});
+(function(){const h=(location.hash||'').slice(1),f=Object.keys(HASH).find(k=>HASH[k]===h);if(f)S.screen=f;render();})();
+</script>
+</body>
+</html>
