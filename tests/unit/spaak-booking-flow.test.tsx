@@ -8,6 +8,10 @@ import { BookingFlow } from "../../src/components/spaak/booking-flow";
  * The component talks only to the public API (`/api/spaak/reparaties`, `/api/spaak/dag`, `/api/spaak/afspraken`);
  * fetch is faked here. Accessible names are the contract: the end-to-end suite (W6) uses the same names in a real
  * browser. Written by the meester; the builder may not change this file.
+ *
+ * Repair 1 (05-10, Sol review of fb0e573): going back to the slots after a lost response made a new key and could
+ * book twice (medium); elapsed slots of today were selectable (medium); the root layout loaded Google fonts, so an
+ * offline build failed (medium).
  */
 
 type Reply = { status: number; body: unknown } | "network-error" | "hang";
@@ -180,5 +184,46 @@ describe("journey J1: booking on the phone", () => {
     const overig = await screen.findByRole("button", { name: /Overig/ });
     expect(overig.textContent).toMatch(/offerte/i);
     expect(screen.getByRole("button", { name: /Onderhoudsbeurt/ }).textContent).toMatch(/€\s?69/);
+  });
+});
+
+describe("repair 1", () => {
+  it("keeps the key of an unanswered submission when the customer goes back and picks the same slot", async () => {
+    replies.afspraken = ["network-error", { status: 201, body: BOOKED }];
+    await toDetails();
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Ander tijdvak kiezen" }));
+    fireEvent.click(await screen.findByRole("button", { name: /10:00\s*[–-]\s*11:00/ }));
+    await screen.findByRole("heading", { name: "Wie ben je?" });
+    fireEvent.click(screen.getByRole("button", { name: "Bevestigen" }));
+    await screen.findByRole("heading", { name: "Je afspraak staat" });
+    const keys = bookingPosts().map((c) => new Headers(c.init?.headers).get("idempotency-key"));
+    expect(keys).toHaveLength(2);
+    expect(keys[0]).toBe(keys[1]);
+  });
+
+  it("shows elapsed slots of today as past and not selectable", async () => {
+    replies["dag:2026-10-08"] = [{ status: 200, body: { datum: "2026-10-08", reden: null, volgende: null, tijdvakken: [
+      { start: "09:00", eind: "10:00", vrij: 0, capaciteit: 2, voorbij: true },
+      { start: "11:00", eind: "12:00", vrij: 2, capaciteit: 2, voorbij: false }] } }];
+    render(<BookingFlow initialDate="2026-10-08" />);
+    fireEvent.click(await screen.findByRole("button", { name: /Onderhoudsbeurt/ }));
+    const past = await screen.findByRole("button", { name: /09:00\s*[–-]\s*10:00.*Voorbij/ });
+    expect((past as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /11:00\s*[–-]\s*12:00/ }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("builds without network: no Google fonts anywhere in the app", async () => {
+    const { readFileSync, readdirSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const walk = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+      const full = join(dir, name);
+      return statSync(full).isDirectory() ? walk(full) : [full];
+    });
+    const offenders = walk(join(process.cwd(), "src")).filter((f) => /\.(ts|tsx|css)$/.test(f))
+      .filter((f) => /next\/font\/google|fonts\.googleapis\.com/.test(readFileSync(f, "utf8")));
+    expect(offenders).toEqual([]);
   });
 });

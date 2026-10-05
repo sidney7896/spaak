@@ -6,6 +6,9 @@ import { MemoryStore } from "../../src/lib/spaak/memory-store";
  * Werkstuk W2 (route D trial, 05-10): the public booking API of Spaak. Route handlers read the store through
  * `getStore()` from src/lib/spaak/server.ts; here that is a MemoryStore with a fixed clock (Thursday 8 October 2026,
  * 10:15 in Amsterdam). Written by the meester; the builder may not change this file.
+ *
+ * Repair 1 (05-10, Sol review of fb0e573): a reused idempotency key returned another customer's booking (high);
+ * today's elapsed slots looked free (medium).
  */
 
 const NOW = new Date("2026-10-08T08:15:00.000Z");
@@ -55,7 +58,7 @@ describe("GET /api/spaak/dag", () => {
     const json = await response.json();
     expect(json.datum).toBe("2026-10-09");
     expect(json.reden).toBeNull();
-    expect(json.tijdvakken[0]).toEqual({ start: "09:00", eind: "10:00", vrij: 2, capaciteit: 2 });
+    expect(json.tijdvakken[0]).toEqual({ start: "09:00", eind: "10:00", vrij: 2, capaciteit: 2, voorbij: false });
   });
 
   it("explains a closed day and points to the next free day", async () => {
@@ -128,5 +131,27 @@ describe("POST /api/spaak/afspraken", () => {
     await post({ ...body, naam: "Iemand Anders" }, "j-000001");
     const json = await (await post({ ...body, naam: "Bas" }, "k-000001")).json();
     expect(JSON.stringify(json)).not.toContain("Iemand Anders");
+  });
+});
+
+describe("repair 1", () => {
+  it("never hands out another customer's booking for a reused key", async () => {
+    const alice = await (await post(body, "shared-key-01")).json();
+    const response = await post({ ...body, naam: "Bob Bakker", telefoon: "06 9999 0000", email: "bob@example.nl", fiets: "Batavus" }, "shared-key-01");
+    expect(response.status).toBe(409);
+    const text = JSON.stringify(await response.json());
+    for (const secret of [alice.code, "Femke", "femke@example.nl", "06 1234 5678", "Gazelle"]) expect(text).not.toContain(secret);
+    const same = await post(body, "shared-key-01");
+    expect((await same.json()).code).toBe(alice.code);
+  });
+
+  it("marks today's elapsed slots as past, never as free", async () => {
+    const json = await (await getDay(new NextRequest("https://spaak.example/api/spaak/dag?datum=2026-10-08"))).json();
+    const nine = json.tijdvakken.find((s: { start: string }) => s.start === "09:00");
+    const ten = json.tijdvakken.find((s: { start: string }) => s.start === "10:00");
+    const eleven = json.tijdvakken.find((s: { start: string }) => s.start === "11:00");
+    expect(nine).toMatchObject({ vrij: 0, voorbij: true });
+    expect(ten).toMatchObject({ vrij: 0, voorbij: true });
+    expect(eleven).toMatchObject({ vrij: 2, voorbij: false });
   });
 });
