@@ -27,6 +27,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           code: booking.code, naam: booking.naam, telefoon: booking.telefoon, fiets: booking.fiets,
           reparatie: repairNames.get(booking.repairTypeId) ?? "Onbekende reparatie",
           status: booking.status, start: booking.start, eind: booking.end,
+          ophalen: booking.ophalen, toeslagCent: booking.toeslagCent,
         })),
       })),
     });

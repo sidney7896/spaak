@@ -1,7 +1,7 @@
-import { CODE_ALPHABET, slotsForDate, slotStart, validateContact } from "./domain";
+import { CODE_ALPHABET, normalizePostcode, OPHAAL_TOESLAG_CENT, slotsForDate, slotStart, validateContact, validateOphalen } from "./domain";
 import type { Slot, Status } from "./domain";
 import type {
-  Booking, BookingInput, BookingResult, CancelResult, DayAvailability, DayOverviewGroup,
+  Booking, BookingFields, BookingInput, BookingResult, CancelResult, DayAvailability, DayOverviewGroup,
   RepairType, SpaakStore, StatusResult,
 } from "./store";
 
@@ -70,7 +70,14 @@ function booking(value: unknown): Booking {
     start: time(row.start), end: time(row.eind), status: status as Status,
     naam: text(row.naam), telefoon: text(row.telefoon), email: text(row.email), fiets: text(row.fiets),
     createdAt: new Date(created).toISOString(),
+    ophalen: row.ophaal_postcode === null && row.ophaal_adres === null ? null
+      : { postcode: text(row.ophaal_postcode), adres: text(row.ophaal_adres) },
+    toeslagCent: integer(row.toeslag_cent),
   };
+  if (result.ophalen ? Object.keys(validateOphalen(result.ophalen)).length > 0 ||
+      normalizePostcode(result.ophalen.postcode) !== result.ophalen.postcode ||
+      result.ophalen.adres.trim() !== result.ophalen.adres || result.toeslagCent !== OPHAAL_TOESLAG_CENT
+    : result.toeslagCent !== 0) return malformed();
   const slot = slotsForDate(result.date, []).find((slot) => slot.start === result.start);
   if (!result.repairTypeId || Object.keys(validateContact(result)).length || slot?.end !== result.end) return malformed();
   return result;
@@ -163,7 +170,9 @@ export class SupabaseStore implements SpaakStore {
   }
 
   async book(input: BookingInput, idempotencyKey: string): Promise<BookingResult> {
-    const fields: Partial<Record<keyof BookingInput, string>> = validateContact(input);
+    const fields: BookingFields = {
+      ...validateContact(input), ...(input.ophalen ? validateOphalen(input.ophalen) : {}),
+    };
     let slots: Slot[];
     try { slots = slotsForDate(input.date, []); } catch {
       fields.date = "Kies een geldige datum.";
@@ -183,7 +192,12 @@ export class SupabaseStore implements SpaakStore {
     const failure = outcome(result, ["ongeldig", "gesloten", "verleden", "vol"] as const);
     if (failure.ok) return malformed();
     if (failure.reason === "ongeldig") {
-      return { ...failure, fields: { repairTypeId: text(object(result.fields).repairTypeId) } };
+      const rawFields = object(result.fields);
+      const fields: BookingFields = {};
+      for (const field of ["repairTypeId", "date", "start", "naam", "telefoon", "email", "fiets", "ophalen", "postcode", "adres"] as const) {
+        if (Object.hasOwn(rawFields, field)) fields[field] = text(rawFields[field]);
+      }
+      return { ...failure, fields };
     }
     return failure;
   }

@@ -9,7 +9,7 @@
 // In --check and --apply mode the slug and topology come from project.profile.json, so CI cannot
 // check one project's schema against another project's identity. Nothing is ever guessed: when the
 // environment cannot be derived from --environment or from the schema suffix the run fails.
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import { existsSync, realpathSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const projectDir = resolve(scriptDir, "..");
-const migrationPath = join(projectDir, "supabase", "migrations", "0001_notes_and_private_storage.sql");
+const migrationDirectory = join(projectDir, "supabase", "migrations");
 const profilePath = join(projectDir, "project.profile.json");
 
 export const ENVIRONMENT_CODES = {
@@ -180,7 +180,17 @@ export function applyRendered(file, target, environment = process.env, run = spa
 async function main() {
   const flags = parseFlags(process.argv.slice(2));
   const target = resolveTarget(flags, (flags.check || flags.apply) ? await readProfile() : { topology: flags.topology });
-  const rendered = renderMigration(await readFile(migrationPath, "utf8"), target);
+  const entries = await readdir(migrationDirectory, { withFileTypes: true });
+  for (const entry of entries) {
+    if (!entry.isFile() || !/^[0-9]{4}_[a-z0-9_]+\.sql$/.test(entry.name)) {
+      throw new Error(`invalid migration file ${entry.name}`);
+    }
+  }
+  const names = entries.map((entry) => entry.name).sort();
+  if (!names.includes("0001_notes_and_private_storage.sql")) throw new Error("initial migration 0001 is required");
+  const templates = await Promise.all(names.map((name) => readFile(join(migrationDirectory, name), "utf8")));
+  // Validate the R3-05 pins on the whole set; the initial migration carries both pins.
+  const rendered = renderMigration(templates.map((template) => selectTopologyBlocks(template, target.topology)).join("\n"), target);
 
   if (flags.check) {
     process.stdout.write(`migration:check ok - ${target.slug}/${target.environment} renders ${rendered.split("\n").length} lines pinned to schema ${target.schema} and bucket ${target.bucket}\n`);

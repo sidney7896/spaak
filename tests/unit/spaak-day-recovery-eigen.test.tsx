@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DayBoard } from "../../src/components/spaak/day-board";
 
 const BOOKING = { code: "R7TQ2D", naam: "Femke de Wit", telefoon: "06 1234 5678", fiets: "Gazelle",
-  reparatie: "Onderhoudsbeurt", status: "gepland", start: "11:00", eind: "12:00" };
+  reparatie: "Onderhoudsbeurt", status: "gepland", start: "11:00", eind: "12:00", ophalen: null, toeslagCent: 0 };
 const DAY = { datum: "2026-10-08", tijdvakken: [{ start: "11:00", eind: "12:00", afspraken: [BOOKING] }] };
 function reply(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });

@@ -1,8 +1,11 @@
-import type { Contact, Slot, Status } from "./domain";
+import type { Contact, Ophalen, Slot, Status } from "./domain";
 
 export type RepairType = { id: string; naam: string; duurMinuten: number; prijsCent: number | null };
-export type BookingInput = Contact & { repairTypeId: string; date: string; start: string };
-export type Booking = BookingInput & { code: string; end: string; status: Status; createdAt: string };
+export type BookingInput = Contact & { repairTypeId: string; date: string; start: string; ophalen?: Ophalen | null };
+export type Booking = BookingInput & {
+  code: string; end: string; status: Status; createdAt: string; ophalen: Ophalen | null; toeslagCent: number;
+};
+export type BookingFields = Partial<Record<keyof BookingInput | keyof Ophalen, string>>;
 
 export type AvailableSlot = Slot & { booked: number; free: number; past: boolean };
 export type DayAvailability = {
@@ -18,7 +21,7 @@ export type BookingResult =
   | {
     ok: false;
     reason: "ongeldig" | "gesloten" | "verleden" | "vol";
-    fields?: Partial<Record<keyof BookingInput, string>>;
+    fields?: BookingFields;
   };
 export type CancelResult = { ok: true } | { ok: false; reason: "onbekend" | "status" | "te-laat" };
 export type StatusResult = { ok: true } | { ok: false; reason: "onbekend" | "overgang" };

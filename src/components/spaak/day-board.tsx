@@ -1,13 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { nextStatus, type Status } from "../../lib/spaak/domain";
+import { nextStatus, normalizePostcode, OPHAAL_TOESLAG_CENT, validateOphalen, type Ophalen, type Status } from "../../lib/spaak/domain";
 
 type ActiveStatus = Exclude<Status, "geannuleerd">;
 type WorkshopStatus = Exclude<ActiveStatus, "gepland">;
 type Appointment = {
   code: string; naam: string; telefoon: string; fiets: string; reparatie: string;
   status: ActiveStatus; start: string; eind: string;
+  ophalen: Ophalen | null; toeslagCent: number;
 };
 type Day = { datum: string; tijdvakken: { start: string; eind: string; afspraken: Appointment[] }[] };
 type Task = { kind: "day"; date: string } | { kind: "status"; date: string; code: string; status: WorkshopStatus };
@@ -40,9 +41,15 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 function appointment(value: unknown): value is Appointment {
-  return record(value) && ["code", "naam", "telefoon", "fiets", "reparatie", "start", "eind"]
+  if (!(record(value) && ["code", "naam", "telefoon", "fiets", "reparatie", "start", "eind"]
     .every((field) => typeof value[field] === "string") && typeof value.status === "string" &&
-    Object.hasOwn(STATUS_LABELS, value.status);
+    Object.hasOwn(STATUS_LABELS, value.status))) return false;
+  const pickup = value.ophalen;
+  if (pickup === null) return value.toeslagCent === 0;
+  if (!record(pickup) || typeof pickup.postcode !== "string" || typeof pickup.adres !== "string") return false;
+  const ophalen = { postcode: pickup.postcode, adres: pickup.adres };
+  return Object.keys(validateOphalen(ophalen)).length === 0 && normalizePostcode(ophalen.postcode) === ophalen.postcode &&
+    ophalen.adres.trim() === ophalen.adres && value.toeslagCent === OPHAAL_TOESLAG_CENT;
 }
 
 function dayReply(value: unknown, date: string): value is Day {
@@ -94,6 +101,7 @@ export function DayBoard({ initialDate }: { initialDate?: string }) {
   const [busy, setBusy] = useState(true);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [signedOut, setSignedOut] = useState(false);
+  const [pickupOnly, setPickupOnly] = useState(false);
   const active = useRef<AbortController | null>(null);
   const generation = useRef(0);
   const headingId = useId();
@@ -156,6 +164,12 @@ export function DayBoard({ initialDate }: { initialDate?: string }) {
     };
   }, [date, execute]);
 
+  const groups = day?.tijdvakken.flatMap((slot) => {
+    if (!pickupOnly) return [slot];
+    const afspraken = slot.afspraken.filter((booking) => booking.ophalen);
+    return afspraken.length ? [{ ...slot, afspraken }] : [];
+  });
+
   return <section className="spaak-flow spaak-day-board" aria-labelledby={headingId}>
     {(day !== null || !busy) && <h1 id={headingId}>
       {dayFormatter.format(new Date(`${day?.datum ?? date}T00:00:00Z`))}
@@ -166,6 +180,8 @@ export function DayBoard({ initialDate }: { initialDate?: string }) {
       <button type="button" className="spaak-button spaak-secondary" disabled={busy && day !== null}
         onClick={() => setDate((current) => shiftDate(current, 1))}>Volgende dag</button>
     </div>
+    <button type="button" className="spaak-button spaak-secondary" aria-pressed={pickupOnly}
+      onClick={() => setPickupOnly((current) => !current)}>Ophalen</button>
     {busy && <p className="spaak-loading" role="status">{day ? "Status wordt gewijzigd…" : "Agenda wordt geladen…"}</p>}
     {signedOut && <div className="spaak-alert" role="alert">
       <p>Log opnieuw in.</p><a className="spaak-button spaak-secondary" href="/sign-in">Opnieuw inloggen</a>
@@ -176,13 +192,14 @@ export function DayBoard({ initialDate }: { initialDate?: string }) {
         Opnieuw proberen
       </button>
     </div>}
-    {day?.tijdvakken.length === 0 && <div className="spaak-panel spaak-empty-day">
+    {day && pickupOnly && groups?.length === 0 && <p>Vandaag niets op te halen.</p>}
+    {!pickupOnly && day?.tijdvakken.length === 0 && <div className="spaak-panel spaak-empty-day">
       <p>Geen afspraken vandaag</p>
       <button type="button" className="spaak-button" onClick={() => setDate((current) => shiftDate(current, 1))}>
         Naar morgen
       </button>
     </div>}
-    {day?.tijdvakken.map((slot) => <section className="spaak-workshop-slot" key={slot.start}>
+    {groups?.map((slot) => <section className="spaak-workshop-slot" key={slot.start}>
       <h2>{slot.start} – {slot.eind}</h2>
       {slot.afspraken.map((booking) => <article className="spaak-panel spaak-workshop-booking"
         aria-label={booking.naam} key={booking.code}>
@@ -193,6 +210,10 @@ export function DayBoard({ initialDate }: { initialDate?: string }) {
         </div>
         <p><strong>{booking.reparatie}</strong></p>
         <p>{booking.fiets}</p><p>{booking.telefoon}</p><p>Code: <strong>{booking.code}</strong></p>
+        {booking.ophalen && <>
+          <p><strong>Ophalen</strong></p>
+          <p>{booking.ophalen.adres}, {booking.ophalen.postcode}</p>
+        </>}
         <div className="spaak-status-buttons" role="group" aria-label={`Status van ${booking.naam}`}>
           {STATUS_BUTTONS.map((status) => <button key={status} type="button" className="spaak-button spaak-secondary"
             aria-pressed={booking.status === status}

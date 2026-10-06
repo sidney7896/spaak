@@ -2,17 +2,17 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { slotsForDate, slotStart, validateContact } from "../../lib/spaak/domain";
-import type { Contact } from "../../lib/spaak/domain";
-import type { Booking, BookingInput, RepairType } from "../../lib/spaak/store";
+import { slotsForDate, slotStart, validateContact, validateOphalen } from "../../lib/spaak/domain";
+import type { Contact, Ophalen } from "../../lib/spaak/domain";
+import type { Booking, BookingFields, BookingInput, RepairType } from "../../lib/spaak/store";
 import { Wheel } from "./wheel";
 
 type Step = 1 | 2 | 3 | 4;
 type TimeSlot = { start: string; eind: string; vrij: number; capaciteit: number; voorbij?: boolean };
 type Day = { datum: string; reden: "gesloten" | "vol" | null; volgende: string | null; tijdvakken: TimeSlot[] };
 type Summary = Pick<Booking, "date" | "start" | "end" | "repairTypeId">;
-type Confirmation = { code: string; afspraak: Summary };
-type FieldErrors = Partial<Record<keyof BookingInput, string>>;
+type Confirmation = { code: string; afspraak: Summary & Pick<Booking, "ophalen" | "toeslagCent"> };
+type FieldErrors = BookingFields;
 type ApiRequest = { kind: "repairs" } | { kind: "day"; date: string }
   | { kind: "booking"; input: BookingInput; key: string };
 type Submission = Extract<ApiRequest, { kind: "booking" }>;
@@ -24,7 +24,8 @@ const LABELS: Record<keyof Contact, string> = {
   naam: "Naam", telefoon: "Telefoon", email: "E-mail", fiets: "Wat is er met je fiets?",
 };
 const CONTACT_FIELDS: (keyof Contact)[] = ["naam", "telefoon", "email", "fiets"];
-const BOOKING_FIELDS: (keyof BookingInput)[] = [...CONTACT_FIELDS, "date", "start", "repairTypeId"];
+const BOOKING_FIELDS: (keyof BookingInput | keyof Ophalen)[] = [...CONTACT_FIELDS, "date", "start", "repairTypeId", "ophalen", "postcode", "adres"];
+const PICKUP_LABELS: Record<keyof Ophalen, string> = { postcode: "Postcode", adres: "Straat en huisnummer" };
 const dayFormatter = new Intl.DateTimeFormat("nl-NL", {
   weekday: "long", day: "numeric", month: "long", timeZone: "UTC",
 });
@@ -110,6 +111,8 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
   const [day, setDay] = useState<Day | null>(null);
   const [slot, setSlot] = useState<TimeSlot | null>(null);
   const [contact, setContact] = useState<Contact>({ naam: "", telefoon: "", email: "", fiets: "" });
+  const [pickupEnabled, setPickupEnabled] = useState(false);
+  const [pickup, setPickup] = useState<Ophalen>({ postcode: "", adres: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -208,7 +211,9 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
 
   function submitBooking(): void {
     if (active.current || submission || !repair || !slot) return;
-    const fieldErrors = validateContact(contact);
+    const fieldErrors: FieldErrors = {
+      ...validateContact(contact), ...(pickupEnabled ? validateOphalen(pickup) : {}),
+    };
     setErrors(fieldErrors);
     if (Object.keys(fieldErrors).length > 0) {
       setNotice(null);
@@ -217,6 +222,7 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
     const input: BookingInput = {
       naam: contact.naam.trim(), telefoon: contact.telefoon.trim(), email: contact.email.trim(), fiets: contact.fiets.trim(),
       repairTypeId: repair.id, date, start: slot.start,
+      ...(pickupEnabled ? { ophalen: { ...pickup } } : {}),
     };
     const task: Submission = { kind: "booking", input, key: crypto.randomUUID() };
     setSubmission(task);
@@ -302,6 +308,35 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
             {errors[field] && <p className="spaak-field-error" id={`${id}-error`}>{errors[field]}</p>}
           </div>;
         })}
+        <div className="spaak-field spaak-pickup-choice">
+          <label htmlFor={`${fieldPrefix}-ophalen`}>
+            <input id={`${fieldPrefix}-ophalen`} name="ophalen" type="checkbox" checked={pickupEnabled}
+              disabled={formLocked} onChange={(event) => {
+                if (active.current || submission) return;
+                setPickupEnabled(event.target.checked);
+                setErrors((current) => ({ ...current, postcode: undefined, adres: undefined, ophalen: undefined }));
+              }} />
+            Ophalen en terugbrengen (€10 extra)
+          </label>
+        </div>
+        {pickupEnabled && (["postcode", "adres"] as const).map((field) => {
+          const id = `${fieldPrefix}-${field}`;
+          return <div className="spaak-field" key={field}>
+            <label htmlFor={id}>{PICKUP_LABELS[field]}</label>
+            <input id={id} name={field} type="text" value={pickup[field]} disabled={formLocked}
+              autoComplete={field === "postcode" ? "postal-code" : "street-address"}
+              aria-invalid={errors[field] ? true : undefined}
+              aria-describedby={errors[field] ? `${id}-error` : undefined}
+              onChange={(event) => {
+                if (active.current || submission) return;
+                const value = event.target.value;
+                setPickup((current) => ({ ...current, [field]: value }));
+                setErrors((current) => ({ ...current, [field]: undefined }));
+              }} />
+            {errors[field] && <p className="spaak-field-error" id={`${id}-error`}>{errors[field]}</p>}
+          </div>;
+        })}
+        {errors.ophalen && <p className="spaak-field-error">{errors.ophalen}</p>}
         {(["date", "start", "repairTypeId"] as const).map((field) => errors[field]
           ? <p className="spaak-field-error" key={field}>{errors[field]}</p> : null)}
         <button className="spaak-button" type="submit" disabled={formLocked}>Bevestigen</button>
@@ -311,7 +346,12 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
     {step === 4 && confirmation && <>
       <p className="spaak-lead">Bewaar je afspraakcode. We zien je graag in de werkplaats.</p>
       <p className="spaak-code" aria-label="Afspraakcode">{Array.from(confirmation.code, (letter, index) => <span key={index}>{letter}</span>)}</p>
-      <div className="spaak-panel spaak-confirmation">{summary(confirmation.afspraak)}</div>
+      <div className="spaak-panel spaak-confirmation">{summary(confirmation.afspraak)}
+        {confirmation.afspraak.ophalen && <>
+          <p>Ophalen en terugbrengen: €10 extra</p>
+          <p>{confirmation.afspraak.ophalen.adres}, {confirmation.afspraak.ophalen.postcode}</p>
+        </>}
+      </div>
     </>}
   </section>;
 }

@@ -10,6 +10,7 @@ const CONTACT = {
 };
 const BOOKED = { code: "R7TQ2D", afspraak: {
   date: "2026-10-09", start: "10:00", end: "11:00", repairTypeId: "onderhoud",
+  ophalen: null, toeslagCent: 0,
 } };
 type Reply = { status: number; body: unknown } | "network" | "timeout";
 let replies: Reply[];
@@ -54,6 +55,7 @@ async function details() {
 }
 
 function expectLocked() {
+  expect((screen.getByRole("checkbox", { name: "Ophalen en terugbrengen (€10 extra)" }) as HTMLInputElement).disabled).toBe(true);
   for (const label of Object.keys(CONTACT)) {
     expect((screen.getByLabelText(label) as HTMLInputElement).disabled).toBe(true);
   }

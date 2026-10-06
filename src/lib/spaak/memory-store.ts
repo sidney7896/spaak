@@ -1,9 +1,13 @@
-import { canCancel, generateCode, nextStatus, slotsForDate, slotStart, validateContact } from "./domain";
+import { canCancel, generateCode, nextStatus, normalizePostcode, OPHAAL_TOESLAG_CENT, slotsForDate, slotStart, validateContact, validateOphalen } from "./domain";
 import type { Slot, Status } from "./domain";
 import type {
-  Booking, BookingInput, BookingResult, CancelResult, DayAvailability, DayOverviewGroup,
+  Booking, BookingFields, BookingInput, BookingResult, CancelResult, DayAvailability, DayOverviewGroup,
   RepairType, SpaakStore, StatusResult,
 } from "./store";
+
+function copyBooking(booking: Booking): Booking {
+  return { ...booking, ophalen: booking.ophalen ? { ...booking.ophalen } : null };
+}
 
 export class MemoryStore implements SpaakStore {
   private readonly now: () => Date;
@@ -92,10 +96,12 @@ export class MemoryStore implements SpaakStore {
     const previousCode = this.idempotency.get(idempotencyKey);
     if (previousCode !== undefined) {
       const previous = this.bookings.get(previousCode);
-      if (previous) return { ok: true, booking: { ...previous } };
+      if (previous) return { ok: true, booking: copyBooking(previous) };
     }
 
-    const fields: Partial<Record<keyof BookingInput, string>> = validateContact(input);
+    const fields: BookingFields = {
+      ...validateContact(input), ...(input.ophalen ? validateOphalen(input.ophalen) : {}),
+    };
     if (!this.repairTypes.some((type) => type.id === input.repairTypeId)) {
       fields.repairTypeId = "Kies een geldig reparatietype.";
     }
@@ -131,10 +137,12 @@ export class MemoryStore implements SpaakStore {
       end: slot.end,
       status: "gepland",
       createdAt: now.toISOString(),
+      ophalen: input.ophalen ? { postcode: normalizePostcode(input.ophalen.postcode)!, adres: input.ophalen.adres.trim() } : null,
+      toeslagCent: input.ophalen ? OPHAAL_TOESLAG_CENT : 0,
     };
     this.bookings.set(code, booking);
     this.idempotency.set(idempotencyKey, code);
-    return { ok: true, booking: { ...booking } };
+    return { ok: true, booking: copyBooking(booking) };
   }
 
   private lookup(code: string): Booking | undefined {
@@ -143,7 +151,7 @@ export class MemoryStore implements SpaakStore {
 
   async findByCode(code: string): Promise<Booking | null> {
     const booking = this.lookup(code);
-    return booking ? { ...booking } : null;
+    return booking ? copyBooking(booking) : null;
   }
 
   async cancel(code: string): Promise<CancelResult> {
@@ -158,7 +166,7 @@ export class MemoryStore implements SpaakStore {
   async dayOverview(date: string): Promise<DayOverviewGroup[]> {
     // Existing repairs remain visible even when their day is subsequently closed.
     return slotsForDate(date, []).flatMap((slot): DayOverviewGroup[] => {
-      const bookings = this.activeBookings(date, slot.start).map((booking) => ({ ...booking }));
+      const bookings = this.activeBookings(date, slot.start).map(copyBooking);
       if (bookings.length === 0) return [];
       const capacity = this.capacities.get(date)?.get(slot.start) ?? slot.capacity;
       return [{ slot: { ...slot, capacity }, bookings }];

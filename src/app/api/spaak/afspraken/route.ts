@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import type { BookingInput } from "../../../../lib/spaak/store";
+import { normalizePostcode, validateOphalen, type Ophalen } from "../../../../lib/spaak/domain";
 import { getStore } from "../../../../lib/spaak/server";
 import { spaakJson } from "../response";
 
@@ -48,8 +49,24 @@ export async function POST(request: NextRequest) {
   for (const field of INPUT_FIELDS) {
     if (typeof object[field] !== "string") fields[field] = "Vul dit veld in als tekst.";
   }
+  let ophalen: Ophalen | null = null;
+  if (object.ophalen !== undefined && object.ophalen !== null) {
+    const value = object.ophalen;
+    if (typeof value !== "object" || Array.isArray(value) || Object.keys(value).length !== 2 ||
+        !Object.hasOwn(value, "postcode") || !Object.hasOwn(value, "adres") ||
+        typeof (value as Record<string, unknown>).postcode !== "string" ||
+        typeof (value as Record<string, unknown>).adres !== "string") {
+      fields.ophalen = "Vul postcode en adres in als tekst.";
+    } else {
+      ophalen = value as Ophalen;
+    }
+  }
   if (Object.keys(fields).length > 0) {
     return spaakJson({ reden: "ongeldig", velden: fields }, 422);
+  }
+  if (ophalen) {
+    const errors = validateOphalen(ophalen);
+    if (Object.keys(errors).length) return spaakJson({ reden: "ongeldig", velden: errors }, 422);
   }
   // Copy only the validated input fields; ignore additional properties.
   const input: BookingInput = {
@@ -60,6 +77,7 @@ export async function POST(request: NextRequest) {
     telefoon: object.telefoon as string,
     email: object.email as string,
     fiets: object.fiets as string,
+    ophalen,
   };
   try {
     const result = await getStore().book(input, key);
@@ -67,7 +85,10 @@ export async function POST(request: NextRequest) {
       // The store returns the original booking for a reused key. Only its submitter may see it.
       const matches = INPUT_FIELDS.every((field) => result.booking[field] ===
         (field === "repairTypeId" || field === "date" || field === "start" ? input[field] : input[field].trim()));
-      if (!matches) return spaakJson({ reden: "sleutel" }, 409);
+      const stored = result.booking.ophalen;
+      const pickupMatches = ophalen === null ? stored === null : stored !== null &&
+        stored.postcode === normalizePostcode(ophalen.postcode) && stored.adres === ophalen.adres.trim();
+      if (!matches || !pickupMatches) return spaakJson({ reden: "sleutel" }, 409);
       return spaakJson({ code: result.booking.code, afspraak: result.booking }, 201);
     }
     if (result.reason === "ongeldig") {

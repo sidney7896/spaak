@@ -5,6 +5,26 @@ export const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 export type Slot = { start: string; end: string; capacity: number };
 export type Contact = { naam: string; telefoon: string; email: string; fiets: string };
 export type ContactErrors = Partial<Record<keyof Contact, string>>;
+export type Ophalen = { postcode: string; adres: string };
+export const OPHAAL_TOESLAG_CENT = 1000;
+
+export function normalizePostcode(input: string): string | null {
+  const compact = input.replace(/\s/g, "").toUpperCase();
+  if (!/^[1-9][0-9]{3}[A-Z]{2}$/.test(compact)) return null;
+  return `${compact.slice(0, 4)} ${compact.slice(4)}`;
+}
+
+export function validateOphalen(o: Ophalen): Partial<Record<keyof Ophalen, string>> {
+  const errors: Partial<Record<keyof Ophalen, string>> = {};
+  const postcode = normalizePostcode(o.postcode);
+  if (postcode === null) errors.postcode = "Vul een postcode in zoals 3512 AB.";
+  else if (Number(postcode.slice(0, 4)) < 3500 || Number(postcode.slice(0, 4)) > 3599) {
+    errors.postcode = "We halen alleen op binnen de ring: postcodes 3500 tot en met 3599";
+  }
+  const length = o.adres.trim().length;
+  if (length < 1 || length > 120) errors.adres = "Vul een straat en huisnummer in.";
+  return errors;
+}
 
 function parseDate(date: string): Date {
   if (date.length !== 10 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Ongeldige datum.");
