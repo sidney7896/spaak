@@ -3,6 +3,3 @@ allowBuilds:
   "@sentry/cli": false
   core-js: false
   unrs-resolver: false
-# Security fix (06-10): source-map-js < 1.2.2 has a high-severity event-loop DoS (GHSA-68fv-2mgg-jv7q); build tooling only.
-overrides:
-  source-map-js: 1.2.2
