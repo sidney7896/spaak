@@ -103,7 +103,11 @@ describe("the booking page footer (W7, meester 06-10)", () => {
     // Moving through the booking steps never removes it (it is page chrome, not part of a step).
     fireEvent.click(await screen.findByRole("button", { name: /Onderhoudsbeurt/ }));
     await screen.findByRole("heading", { name: "Wanneer kom je?" });
-    expect(within(footer).getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true })).toBeTruthy();
+    // Query the footer again from the live document (review W7-h4 F1): a detached old node would still hold the text.
+    const footerNa = container.querySelector<HTMLElement>("footer.spaak-footer");
+    if (!footerNa) throw new Error("Expected the home page footer after moving to step 2.");
+    expect(footerNa.isConnected).toBe(true);
+    expect(within(footerNa).getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true })).toBeTruthy();
   });
 });
 
