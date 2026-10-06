@@ -196,6 +196,30 @@ describe("W7: full rendered migration in PGlite", () => {
     } finally { await db.close(); }
   });
 
+  // Checks the SQL shape guard on a direct RPC call, without the API in front (review F1, 06-10).
+  // Catches: a spaak_boek that coerces a number to text, ignores a missing or extra key, or accepts a non-object.
+  it("rejects every malformed pick-up shape server-side with fields.ophalen and no rows", async () => {
+    const db = new PGlite();
+    try {
+      await db.exec(PRELUDE);
+      await db.exec(`set search_path to public;\n${render()}`);
+      const shapes: unknown[] = [
+        5, "3512 AB", true, [], ["3512 AB", "Oudegracht 1"],
+        {}, { postcode: "3512 AB" }, { adres: "Oudegracht 1" },
+        { postcode: "3512 AB", adres: 123 }, { postcode: 3512, adres: "Oudegracht 1" },
+        { postcode: null, adres: "Oudegracht 1" }, { postcode: "3512 AB", adres: { straat: "Oudegracht" } },
+        { postcode: "3512 AB", adres: "Oudegracht 1", extra: 1 },
+      ];
+      for (const [index, ophalen] of shapes.entries()) {
+        const input = { ...rpcInput(ophalen), sleutel: `direct-sql-shape-${index}` };
+        const r = await db.query<{ r: unknown }>("select public.spaak_boek($1::jsonb) as r", [JSON.stringify(input)]);
+        expect(r.rows[0]?.r, JSON.stringify(ophalen)).toEqual({ ok: false, reason: "ongeldig",
+          fields: { ophalen: "Vul postcode en adres in als tekst." } });
+        expect((await db.query("select code from public.spaak_afspraken")).rows).toEqual([]);
+      }
+    } finally { await db.close(); }
+  });
+
   // Checks SQL normalizes raw input and retains the first booking when the same key is reused.
   // Catches: TS-only normalization or SQL overwriting a first booking on retry.
   it("normalizes valid raw RPC input and keeps idempotency", async () => {

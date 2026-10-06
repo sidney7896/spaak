@@ -49,7 +49,7 @@ describe("W7: the mechanic's pick-up overview", () => {
   it("toggles on and off, hides empty groups and restores all bookings", async () => {
     render(<DayBoard initialDate="2026-10-08" />);
     await screen.findByRole("heading", { name: /donderdag 8 oktober/i });
-    const toggle = screen.getByRole("button", { name: "Ophalen", exact: true });
+    const toggle = screen.getByRole("button", { name: "Ophalen" });
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     expect(screen.getAllByRole("article")).toHaveLength(3);
     fireEvent.click(toggle);
@@ -75,12 +75,12 @@ describe("W7: the mechanic's pick-up overview", () => {
       body: { datum: DAY.datum, tijdvakken: [{ start: "11:00", eind: "12:00", afspraken: [ORDINARY] }] } }];
     render(<DayBoard initialDate="2026-10-08" />);
     await screen.findByRole("article", { name: "Bas" });
-    fireEvent.click(screen.getByRole("button", { name: "Ophalen", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ophalen" }));
     expect(screen.getByText("Vandaag niets op te halen.", { exact: true })).toBeTruthy();
     expect(screen.queryByRole("article")).toBeNull();
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
     expect(screen.queryByText("Geen afspraken vandaag", { exact: true })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Ophalen", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ophalen" }));
     expect(card("Bas")).toBeTruthy();
     expect(screen.queryByText("Vandaag niets op te halen.", { exact: true })).toBeNull();
   });
@@ -91,7 +91,7 @@ describe("W7: the mechanic's pick-up overview", () => {
     replies["GET /api/spaak/werkplaats/dag?datum=2026-10-08"] = [{ status: 200, body: { datum: DAY.datum, tijdvakken: [] } }];
     render(<DayBoard initialDate="2026-10-08" />);
     await screen.findByText("Geen afspraken vandaag", { exact: true });
-    fireEvent.click(screen.getByRole("button", { name: "Ophalen", exact: true }));
+    fireEvent.click(screen.getByRole("button", { name: "Ophalen" }));
     expect(screen.getByText("Vandaag niets op te halen.", { exact: true })).toBeTruthy();
     expect(screen.queryByRole("heading", { level: 2 })).toBeNull();
     expect(calls.filter((c) => c.init?.method === "POST")).toHaveLength(0);
