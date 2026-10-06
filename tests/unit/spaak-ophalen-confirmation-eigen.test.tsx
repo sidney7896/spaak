@@ -1,11 +1,24 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import StatusPage from "../../src/app/status/page";
 import { BookingFlow } from "../../src/components/spaak/booking-flow";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+it("keeps the status page contact footer without the booking footer line", async () => {
+  const { container } = render(await StatusPage({ searchParams: Promise.resolve({}) }));
+  const footer = container.querySelector<HTMLElement>("footer.spaak-footer");
+  if (!footer) throw new Error("Expected the status page footer.");
+
+  expect(within(footer).getByRole("link", { name: "010-555 01 42" }).getAttribute("href"))
+    .toBe("tel:0105550142");
+  expect(screen.queryByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true }))
+    .toBeNull();
+  expect(screen.queryByText("Je brengt je fiets op het gekozen tijdvak.", { exact: true })).toBeNull();
 });
 
 it("never tells the customer to bring the bike after confirming a pick-up booking", async () => {
