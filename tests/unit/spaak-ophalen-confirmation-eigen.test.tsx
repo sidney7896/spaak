@@ -1,12 +1,39 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import HomePage from "../../src/app/page";
 import StatusPage from "../../src/app/status/page";
 import { BookingFlow } from "../../src/components/spaak/booking-flow";
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+it("keeps the pick-up alternative in the live footer after returning from step 2 to step 1", async () => {
+  vi.stubGlobal("fetch", vi.fn(async (input: string) => {
+    const url = new URL(String(input), "https://spaak.example");
+    const body = url.pathname === "/api/spaak/reparaties"
+      ? { reparaties: [{ id: "onderhoud", naam: "Onderhoudsbeurt", duurMinuten: 60, prijsCent: 6900 }] }
+      : { datum: url.searchParams.get("datum"), reden: null, volgende: null,
+        tijdvakken: [{ start: "10:00", eind: "11:00", vrij: 1, capaciteit: 2 }] };
+    return new Response(JSON.stringify(body), { status: 200 });
+  }));
+
+  const { container } = render(await HomePage({ searchParams: Promise.resolve({ datum: "2026-10-09" }) }));
+  fireEvent.click(await screen.findByRole("button", { name: /Onderhoudsbeurt/ }));
+  await screen.findByRole("heading", { name: "Wanneer kom je?" });
+  await screen.findByRole("button", { name: /10:00\s*[–-]\s*11:00/ });
+  const back = screen.getByRole("button", { name: "Andere reparatie kiezen" }) as HTMLButtonElement;
+  expect(back.disabled).toBe(false);
+  fireEvent.click(back);
+  await screen.findByRole("heading", { name: "Wat moet er aan je fiets gebeuren?" });
+
+  const footer = container.querySelector<HTMLElement>("footer.spaak-footer");
+  if (!footer) throw new Error("Expected the home page footer after returning to step 1.");
+  expect(footer.isConnected).toBe(true);
+  expect(within(footer).getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true }))
+    .toBeTruthy();
 });
 
 it("keeps the status page contact footer without the booking footer line", async () => {
