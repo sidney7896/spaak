@@ -90,6 +90,16 @@ describe("the customer pages", () => {
   });
 });
 
+describe("the booking page footer (W7, meester 06-10)", () => {
+  // Checks the visible footer line names pick-up as an alternative to bringing the bike (review W7-h2 F1).
+  // Catches: fixing only the confirmation texts and leaving the old "bring your bike" footer on the home page.
+  it("says the bike can also be picked up within the ring", async () => {
+    render(await HomePage({ searchParams: Promise.resolve({}) }));
+    expect(screen.getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true })).toBeTruthy();
+    expect(screen.queryByText("Je brengt je fiets op het gekozen tijdvak.", { exact: true })).toBeNull();
+  });
+});
+
 describe("opening a page on a given day", () => {
   it("the booking page asks for that day", async () => {
     render(await HomePage({ searchParams: Promise.resolve({ datum: "2026-10-13" }) }));
