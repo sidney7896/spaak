@@ -344,7 +344,9 @@ export function BookingFlow({ initialDate }: { initialDate?: string }) {
       <button className="spaak-back" type="button" disabled={formLocked} onClick={() => openDay(date)}>Ander tijdvak kiezen</button>
     </>}
     {step === 4 && confirmation && <>
-      <p className="spaak-lead">Bewaar je afspraakcode. We zien je graag in de werkplaats.</p>
+      <p className="spaak-lead">{confirmation.afspraak.ophalen
+        ? "Bewaar je afspraakcode. We halen je fiets op en brengen hem terug."
+        : "Bewaar je afspraakcode. We zien je graag in de werkplaats."}</p>
       <p className="spaak-code" aria-label="Afspraakcode">{Array.from(confirmation.code, (letter, index) => <span key={index}>{letter}</span>)}</p>
       <div className="spaak-panel spaak-confirmation">{summary(confirmation.afspraak)}
         {confirmation.afspraak.ophalen && <>

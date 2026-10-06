@@ -14,7 +14,7 @@ export default async function HomePage({ searchParams }: Props) {
     </div></header>
     <BookingFlow initialDate={pageDate(datum)} />
     <footer className="spaak-footer">
-      <p>Je brengt je fiets op het gekozen tijdvak.</p>
+      <p>Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.</p>
       <p>De werkplaats is open van dinsdag tot en met zaterdag. Op zondag en maandag zijn we dicht.</p>
       <a className="spaak-staff-link" href="/werkplaats">Voor de werkplaats</a>
     </footer>
