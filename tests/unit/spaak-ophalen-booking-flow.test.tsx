@@ -179,6 +179,9 @@ describe("W7: pick-up in the booking flow", () => {
     expect(sent).toMatchObject(INPUT);
     expect(domain.normalizePostcode(sent.ophalen.postcode)).toBe("3512 AB");
     expect(sent.ophalen.adres.trim()).toBe("Oudegracht 1");
+    // Review W7-h1 F1 (meester 06-10): a pick-up booking never tells the customer to bring the bike.
+    expect(screen.getByText("Bewaar je afspraakcode. We halen je fiets op en brengen hem terug.", { exact: true })).toBeTruthy();
+    expect(screen.queryByText(/We zien je graag in de werkplaats/)).toBeNull();
   });
 
   // Catches: requiring another step or adding pick-up summary lines for a default ordinary booking.
@@ -189,6 +192,9 @@ describe("W7: pick-up in the booking flow", () => {
     const panel = await confirmation();
     expect(bookingPosts()).toHaveLength(1);
     expectNoPickup(panel);
+    // Without pick-up the existing confirmation text stays exactly as it was.
+    expect(screen.getByText("Bewaar je afspraakcode. We zien je graag in de werkplaats.", { exact: true })).toBeTruthy();
+    expect(screen.queryByText(/We halen je fiets op/)).toBeNull();
   });
 
   // Catches: retaining cached address or surcharge in the request or confirmation after opting out.
