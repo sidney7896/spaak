@@ -13,7 +13,7 @@ let replies: Record<string, { status: number; body: unknown }[]>;
 let calls: { url: string; init?: RequestInit }[];
 
 const BOOKING = { code: "R7TQ2D", naam: "Femke de Wit", telefoon: "06 1234 5678", fiets: "Gazelle, ketting piept",
-                  reparatie: "Onderhoudsbeurt", status: "gepland", start: "11:00", eind: "12:00" };
+                  reparatie: "Onderhoudsbeurt", status: "gepland", start: "11:00", eind: "12:00", ophalen: null, toeslagCent: 0 };
 const DAY = { datum: "2026-10-08", tijdvakken: [
   { start: "11:00", eind: "12:00", afspraken: [BOOKING] },
   { start: "14:00", eind: "15:00", afspraken: [{ ...BOOKING, code: "K3PL9X", naam: "Bas", status: "bezig", start: "14:00", eind: "15:00" }] },

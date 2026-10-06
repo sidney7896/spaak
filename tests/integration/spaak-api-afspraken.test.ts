@@ -76,12 +76,13 @@ describe("GET /api/spaak/dag", () => {
 });
 
 describe("POST /api/spaak/afspraken", () => {
+  // Catches: charging ordinary bookings or omitting their no-pick-up defaults.
   it("books and returns a code", async () => {
     const response = await post(body);
     expect(response.status).toBe(201);
     const json = await response.json();
     expect(json.code).toMatch(/^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/);
-    expect(json.afspraak).toMatchObject({ date: "2026-10-09", start: "10:00", end: "11:00", status: "gepland" });
+    expect(json.afspraak).toMatchObject({ date: "2026-10-09", start: "10:00", end: "11:00", status: "gepland", ophalen: null, toeslagCent: 0 });
   });
 
   it("gives the same booking for a repeated submission with the same key", async () => {

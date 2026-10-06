@@ -15,6 +15,9 @@ function render(args: string[]): string {
   const result = spawnSync(process.execPath, [join(projectRoot, "ops/render-migration.mjs"), ...args], { encoding: "utf8" });
   expect(result.status, result.stderr).toBe(0);
   expect(result.stdout).not.toContain("{{");
+  // Catches: applying only 0001 while claiming to test RLS after the expansion.
+  expect(result.stdout).toContain("ophaal_postcode");
+  expect(result.stdout).toContain("spaak_afspraken_ophalen_check");
   return result.stdout;
 }
 

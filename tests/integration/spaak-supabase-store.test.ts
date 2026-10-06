@@ -33,6 +33,9 @@ function render(): string {
   const result = spawnSync(process.execPath, [join(projectRoot, "ops/render-migration.mjs"), "--slug", "spaak", "--environment", "dev",
     "--schema", "public", "--bucket", "spaak-dev-private", "--topology", "dedicated"], { encoding: "utf8" });
   expect(result.status, result.stderr).toBe(0);
+  // Catches: applying only 0001 while claiming to test the expanded database.
+  expect(result.stdout).toContain("ophaal_postcode");
+  expect(result.stdout).toContain("spaak_afspraken_ophalen_check");
   return result.stdout;
 }
 

@@ -76,15 +76,17 @@ describe("Spaak RPC boundaries", () => {
     expect((await store.dayAvailability(INPUT.date)).reason).toBe("verleden");
   });
 
+  // Catches: omitting null pick-up and zero surcharge from the normalized Booking.
   it("normalizes Postgres times and timestamps into the MemoryStore shape", async () => {
     const raw = {
       code: "ABCDEF", reparatie_id: INPUT.repairTypeId, datum: INPUT.date, start: "10:00:00", eind: "11:00:00",
       naam: INPUT.naam, telefoon: INPUT.telefoon, email: INPUT.email, fiets: INPUT.fiets,
       status: "gepland", aangemaakt: "2026-10-08T08:15:00+00:00",
+      ophaal_postcode: null, ophaal_adres: null, toeslag_cent: 0,
     };
     const { store } = fixture(raw);
     expect(await store.findByCode(" abcdef ")).toEqual({
-      ...INPUT, code: "ABCDEF", end: "11:00", status: "gepland", createdAt: NOW.toISOString(),
+      ...INPUT, code: "ABCDEF", end: "11:00", status: "gepland", createdAt: NOW.toISOString(), ophalen: null, toeslagCent: 0,
     });
   });
 

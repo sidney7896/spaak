@@ -36,7 +36,7 @@ const DAY = {
 const TYPES = { reparaties: [{ id: "onderhoud", naam: "Onderhoudsbeurt", duurMinuten: 60, prijsCent: 6900 },
                               { id: "overig", naam: "Overig", duurMinuten: 60, prijsCent: null }] };
 const BOOKED = { code: "R7TQ2D", afspraak: { date: "2026-10-09", start: "10:00", end: "11:00", status: "gepland",
-                                             repairTypeId: "onderhoud" } };
+                                             repairTypeId: "onderhoud", ophalen: null, toeslagCent: 0 } };
 
 function key(url: string) {
   if (url.startsWith("/api/spaak/reparaties")) return "reparaties";
