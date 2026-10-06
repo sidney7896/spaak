@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BookingFlow } from "../../src/components/spaak/booking-flow";
 
@@ -94,9 +94,16 @@ describe("the booking page footer (W7, meester 06-10)", () => {
   // Checks the visible footer line names pick-up as an alternative to bringing the bike (review W7-h2 F1).
   // Catches: fixing only the confirmation texts and leaving the old "bring your bike" footer on the home page.
   it("says the bike can also be picked up within the ring", async () => {
-    render(await HomePage({ searchParams: Promise.resolve({}) }));
-    expect(screen.getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true })).toBeTruthy();
-    expect(screen.queryByText("Je brengt je fiets op het gekozen tijdvak.", { exact: true })).toBeNull();
+    const { container } = render(await HomePage({ searchParams: Promise.resolve({}) }));
+    // Scoped to the page footer itself (review W7-h3 F1): the line must live in <footer class="spaak-footer">.
+    const footer = container.querySelector<HTMLElement>("footer.spaak-footer");
+    if (!footer) throw new Error("Expected the home page footer.");
+    expect(within(footer).getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true })).toBeTruthy();
+    expect(within(footer).queryByText("Je brengt je fiets op het gekozen tijdvak.", { exact: true })).toBeNull();
+    // Moving through the booking steps never removes it (it is page chrome, not part of a step).
+    fireEvent.click(await screen.findByRole("button", { name: /Onderhoudsbeurt/ }));
+    await screen.findByRole("heading", { name: "Wanneer kom je?" });
+    expect(within(footer).getByText("Je brengt je fiets op het gekozen tijdvak, of laat hem ophalen binnen de ring.", { exact: true })).toBeTruthy();
   });
 });
 
