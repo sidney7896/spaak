@@ -1,8 +1,14 @@
+import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import { normalizePostcode } from "../../src/lib/spaak/domain";
 import { MemoryStore } from "../../src/lib/spaak/memory-store";
 import { SupabaseStore } from "../../src/lib/spaak/supabase-store";
 import type { BookingInput } from "../../src/lib/spaak/store";
+
+const state = vi.hoisted(() => ({ store: null as unknown as MemoryStore }));
+vi.mock("../../src/lib/spaak/server", () => ({ getStore: () => state.store }));
+
+import { POST as postBooking } from "../../src/app/api/spaak/afspraken/route";
 
 const NOW = new Date("2026-10-08T08:15:00Z");
 const INPUT: BookingInput = {
@@ -12,6 +18,25 @@ const INPUT: BookingInput = {
 const PICKUP = { postcode: "3512 AB", adres: "Oudegracht 1" };
 
 describe("pick-up edge cases", () => {
+  it.each([
+    { postcode: "3512 AB", adres: "Oudegracht 1", extra: "unexpected" },
+    { postcode: "3512 AB", adres: 123 },
+  ])("rejects malformed API pick-up without calling the store: %j", async (ophalen) => {
+    state.store = new MemoryStore({ now: () => NOW });
+    const book = vi.spyOn(state.store, "book");
+    const response = await postBooking(new NextRequest("https://spaak.example/api/spaak/afspraken", {
+      method: "POST",
+      headers: { "content-type": "application/json", "idempotency-key": "invalid-pickup-shape" },
+      body: JSON.stringify({ ...INPUT, ophalen }),
+    }));
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toEqual({
+      reden: "ongeldig", velden: { ophalen: "Vul postcode en adres in als tekst." },
+    });
+    expect(book).not.toHaveBeenCalled();
+  });
+
   it("removes Unicode whitespace but keeps zero-width non-whitespace invalid", () => {
     expect(normalizePostcode("\ufeff3\u20285\u20031\u30002 a\u202fb\ufeff")).toBe("3512 AB");
     expect(normalizePostcode("3512\u200bAB")).toBeNull();
